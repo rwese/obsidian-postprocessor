@@ -6,7 +6,6 @@ Coordinates voice memo detection, state management, and script execution.
 
 import logging
 import time
-from pathlib import Path
 from typing import Dict, List
 
 from .config import Config

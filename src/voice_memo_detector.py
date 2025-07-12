@@ -84,11 +84,14 @@ class VoiceMemoDetector:
                 if note_path in metadata.index:
                     rel_filepath = metadata.loc[note_path, "rel_filepath"]
                     rel_filepath_str = str(rel_filepath)
+                    
+                    # Normalize path separators for cross-platform compatibility
+                    normalized_path = rel_filepath_str.replace("\\", "/").lower()
 
                     # Check if in any templates directory (case-insensitive)
                     if (
-                        rel_filepath_str.lower().startswith("templates/")
-                        or "/templates/" in rel_filepath_str.lower()
+                        normalized_path.startswith("templates/")
+                        or "/templates/" in normalized_path
                     ):
                         logger.debug(
                             f"Ignoring template note: {note_path} (path: {rel_filepath})"
