@@ -7,7 +7,7 @@ Handles execution of external scripts with proper error handling and logging.
 import logging
 import subprocess
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 
 logger = logging.getLogger(__name__)
 

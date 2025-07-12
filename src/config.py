@@ -6,7 +6,7 @@ Environment variable based configuration for stateless operation.
 
 import os
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 
 class Config:

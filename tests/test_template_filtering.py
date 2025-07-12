@@ -173,13 +173,13 @@ This is another regular note with a voice memo.
             detector.connect()
 
             # Test cases - now using just note names as that's what obsidiantools provides
-            assert detector._should_ignore_note("My Template") == True  # In templates/
+            assert detector._should_ignore_note("My Template") is True  # In templates/
             assert (
-                detector._should_ignore_note("Nested Template") == True
+                detector._should_ignore_note("Nested Template") is True
             )  # In subfolder/Templates/
 
             # Regular notes should not be ignored
-            assert detector._should_ignore_note("Regular Note") == False
+            assert detector._should_ignore_note("Regular Note") is False
 
     def test_vault_with_only_template_notes(self):
         """Test vault that only contains template notes."""

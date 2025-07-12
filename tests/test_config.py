@@ -7,11 +7,10 @@ import sys
 import tempfile
 from pathlib import Path
 
-import pytest
-
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
+import pytest
 from src.config import Config
 
 
@@ -30,7 +29,7 @@ class TestConfig:
         assert config.voice_patterns == ["*.webm", "*.mp3", "*.wav", "*.m4a"]
         assert config.state_method == "frontmatter"
         assert config.log_level == "INFO"
-        assert config.watch_mode == False
+        assert config.watch_mode is False
 
     def test_env_var_override(self):
         """Test environment variable override."""
@@ -58,7 +57,7 @@ class TestConfig:
                 assert config.voice_patterns == ["*.wav", "*.mp3"]
                 assert config.state_method == "vault_file"
                 assert config.log_level == "DEBUG"
-                assert config.watch_mode == True
+                assert config.watch_mode is True
             finally:
                 # Clean up environment variables
                 for key in [

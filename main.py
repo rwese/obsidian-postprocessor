@@ -10,11 +10,11 @@ import logging
 import sys
 from pathlib import Path
 
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent / "src"))
-
 from src.config import Config
 from src.processor import ObsidianProcessor
+
+# Add src to path
+sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 
 def setup_logging(log_level: str):
@@ -135,7 +135,7 @@ def main():
         results = processor.process_vault(dry_run=args.dry_run)
 
         # Display results
-        print(f"\n=== Processing Results ===")
+        print("\n=== Processing Results ===")
         print(f"Notes with Memos: {results['notes_with_memos']}")
         print(f"Total Recordings: {results['total_recordings']}")
         print(f"Previously Processed: {results['processed_recordings']}")

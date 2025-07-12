@@ -11,7 +11,7 @@ import re
 import sys
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional
 
 import obsidiantools.api as otools
 

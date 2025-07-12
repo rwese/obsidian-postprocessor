@@ -7,7 +7,7 @@ Coordinates voice memo detection, state management, and script execution.
 import logging
 import time
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from .config import Config
 from .runner import ScriptRunner
@@ -183,7 +183,7 @@ class ObsidianProcessor:
                         note_path, voice_files
                     )
                     results["failed_processing"] += len(unprocessed)
-                except:
+                except Exception:
                     # If we can't even get the unprocessed count, assume all are failed
                     results["failed_processing"] += len(voice_files)
                 # Continue with next note
