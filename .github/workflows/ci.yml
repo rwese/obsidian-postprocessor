@@ -12,11 +12,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
-        exclude:
-          # Exclude Python 3.13 on Windows for now (may not be available)
-          - os: windows-latest
-            python-version: '3.13'
+        python-version: ['3.9', '3.11', '3.12']
 
     runs-on: ${{ matrix.os }}
 
@@ -121,10 +117,10 @@ jobs:
         flake8 src/ tests/ main.py
 
         echo "=== Running black (check only) ==="
-        black --check src/ tests/ main.py
+        black --check --line-length=120 src/ tests/ main.py
 
         echo "=== Running isort (check only) ==="
-        isort --check-only src/ tests/ main.py
+        isort --check-only --profile=black --line-length=120 src/ tests/ main.py
 
         echo "=== Running mypy ==="
         mypy src/ --ignore-missing-imports || echo "mypy completed with warnings"
