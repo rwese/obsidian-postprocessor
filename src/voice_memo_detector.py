@@ -118,9 +118,9 @@ class VoiceMemoDetector:
         try:
             if self.suppress_frontmatter_errors:
                 with suppress_frontmatter_errors():
-                    self.vault = otools.Vault(self.vault_path).connect().gather()
+                    self.vault = otools.Vault(self.vault_path).connect(attachments=True).gather()
             else:
-                self.vault = otools.Vault(self.vault_path).connect().gather()
+                self.vault = otools.Vault(self.vault_path).connect(attachments=True).gather()
             logger.info(f"Connected to vault: {self.vault_path}")
             return self
         except Exception as e:

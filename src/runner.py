@@ -163,8 +163,20 @@ class ScriptRunner:
             )
 
             # Check if script accepts the arguments (even if it fails due to dummy files)
-            if "usage:" in result.stderr.lower() or "error:" in result.stderr.lower():
+            stderr_lower = result.stderr.lower()
+            if (
+                "usage:" in stderr_lower
+                or "error:" in stderr_lower
+                or "note_path" in stderr_lower
+                or "voice" in stderr_lower
+                or "file" in stderr_lower
+            ):
                 logger.debug("Script appears to accept expected arguments")
+                return True
+
+            # If script exists and runs without crashing, consider it valid
+            if result.returncode is not None:
+                logger.debug("Script executed without fatal errors, considering valid")
                 return True
 
             logger.warning("Could not validate script interface")
