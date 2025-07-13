@@ -86,7 +86,9 @@ class VoiceMemoDetector:
                     rel_filepath_str = str(rel_filepath)
 
                     # Normalize path separators for cross-platform compatibility
-                    normalized_path = rel_filepath_str.replace("\\", "/").lower()
+                    normalized_path = rel_filepath_str.replace(
+                        "\\", "/"
+                    ).lower()
 
                     # Check if in any templates directory (case-insensitive)
                     if (
@@ -113,7 +115,9 @@ class VoiceMemoDetector:
         if "newFileLocation" in self._obsidian_config:
             location = self._obsidian_config["newFileLocation"]
             if location == "folder":
-                return self._obsidian_config.get("newFileFolderPath", "attachments")
+                return self._obsidian_config.get(
+                    "newFileFolderPath", "attachments"
+                )
 
         # Default behavior
         return None
@@ -123,7 +127,9 @@ class VoiceMemoDetector:
         try:
             if self.suppress_frontmatter_errors:
                 with suppress_frontmatter_errors():
-                    self.vault = otools.Vault(self.vault_path).connect().gather()
+                    self.vault = (
+                        otools.Vault(self.vault_path).connect().gather()
+                    )
             else:
                 self.vault = otools.Vault(self.vault_path).connect().gather()
             logger.info(f"Connected to vault: {self.vault_path}")
@@ -146,8 +152,12 @@ class VoiceMemoDetector:
         total_notes_scanned = 0
         notes_ignored = 0
 
-        logger.debug(f"Starting voice memo detection in vault: {self.vault_path}")
-        logger.debug(f"Voice extension pattern: {self._voice_extension_pattern}")
+        logger.debug(
+            f"Starting voice memo detection in vault: {self.vault_path}"
+        )
+        logger.debug(
+            f"Voice extension pattern: {self._voice_extension_pattern}"
+        )
         logger.debug(f"Voice patterns: {self.voice_patterns}")
 
         try:
@@ -162,14 +172,18 @@ class VoiceMemoDetector:
                             logger.debug(f"Ignoring note: {note_path}")
                             continue
 
-                        voice_files = self._extract_voice_files_from_note(note_path)
+                        voice_files = self._extract_voice_files_from_note(
+                            note_path
+                        )
                         if voice_files:
                             notes_with_memos[note_path] = voice_files
                             logger.debug(
                                 f"Found {len(voice_files)} voice files in {note_path}: {voice_files}"
                             )
                         else:
-                            logger.debug(f"No voice files found in {note_path}")
+                            logger.debug(
+                                f"No voice files found in {note_path}"
+                            )
             else:
                 for note_path in self.vault.md_file_index:
                     total_notes_scanned += 1
@@ -180,7 +194,9 @@ class VoiceMemoDetector:
                         logger.debug(f"Ignoring note: {note_path}")
                         continue
 
-                    voice_files = self._extract_voice_files_from_note(note_path)
+                    voice_files = self._extract_voice_files_from_note(
+                        note_path
+                    )
                     if voice_files:
                         notes_with_memos[note_path] = voice_files
                         logger.debug(
@@ -193,12 +209,20 @@ class VoiceMemoDetector:
             logger.error(f"Error scanning vault for voice memos: {e}")
             raise
 
-        logger.info(f"Voice memo detection complete: scanned {total_notes_scanned} notes, ignored {notes_ignored} notes, found {len(notes_with_memos)} notes with voice memos")
+        logger.info(
+            f"Voice memo detection complete: scanned {total_notes_scanned} notes, "
+            f"ignored {notes_ignored} notes, "
+            f"found {len(notes_with_memos)} notes with voice memos"
+        )
 
         if total_notes_scanned == 0:
-            logger.warning("No notes found in vault - check vault path and .obsidian folder existence")
+            logger.warning(
+                "No notes found in vault - check vault path and .obsidian folder existence"
+            )
         elif len(notes_with_memos) == 0:
-            logger.warning("No voice memos found - check voice file patterns and embedded audio syntax (![[filename.ext]])")
+            logger.warning(
+                "No voice memos found - check voice file patterns and embedded audio syntax (![[filename.ext]])"
+            )
 
         return notes_with_memos
 
@@ -223,24 +247,34 @@ class VoiceMemoDetector:
                 logger.debug(f"No source text found for note: {note_path}")
                 return []
 
-            logger.debug(f"Extracting voice files from note: {note_path} (content length: {len(source_text)})")
+            logger.debug(
+                f"Extracting voice files from note: {note_path} (content length: {len(source_text)})"
+            )
 
             voice_files = []
 
             # Pattern to match Obsidian embedded files: ![[filename.ext]]
             embed_pattern = (
-                r"!\[\[([^\]]+\.(?:" + self._voice_extension_pattern + r"))\]\]"
+                r"!\[\[([^\]]+\.(?:"
+                + self._voice_extension_pattern
+                + r"))\]\]"
             )
             logger.debug(f"Using regex pattern: {embed_pattern}")
 
             # First, let's find ALL embedded files
             all_embeds_pattern = r"!\[\[([^\]]+)\]\]"
-            all_embeds = re.findall(all_embeds_pattern, source_text, re.IGNORECASE)
-            logger.debug(f"Found {len(all_embeds)} total embedded files in {note_path}: {all_embeds}")
+            all_embeds = re.findall(
+                all_embeds_pattern, source_text, re.IGNORECASE
+            )
+            logger.debug(
+                f"Found {len(all_embeds)} total embedded files in {note_path}: {all_embeds}"
+            )
 
             # Now find voice files specifically
             matches = re.findall(embed_pattern, source_text, re.IGNORECASE)
-            logger.debug(f"Found {len(matches)} voice file matches in {note_path}: {matches}")
+            logger.debug(
+                f"Found {len(matches)} voice file matches in {note_path}: {matches}"
+            )
 
             for match in matches:
                 voice_files.append(match)
@@ -248,10 +282,18 @@ class VoiceMemoDetector:
 
             # Additional debug: show what patterns didn't match
             if all_embeds and not matches:
-                non_matching = [e for e in all_embeds if not re.match(
-                    r'.*\.(?:' + self._voice_extension_pattern + r')$', 
-                    e, re.IGNORECASE)]
-                logger.debug(f"Embedded files found but no voice files matched pattern. Non-matching embeds: {non_matching}")
+                non_matching = [
+                    e
+                    for e in all_embeds
+                    if not re.match(
+                        r".*\.(?:" + self._voice_extension_pattern + r")$",
+                        e,
+                        re.IGNORECASE,
+                    )
+                ]
+                logger.debug(
+                    f"Embedded files found but no voice files matched pattern. Non-matching embeds: {non_matching}"
+                )
 
             return voice_files
 
@@ -297,7 +339,9 @@ class VoiceMemoDetector:
 
         # 5. Try common attachments folders
         for attachments_dir in ["attachments", "assets", "files", "media"]:
-            search_paths.append(self.vault_path / attachments_dir / voice_filename)
+            search_paths.append(
+                self.vault_path / attachments_dir / voice_filename
+            )
 
         # Try each path and return the first one that exists
         for path in search_paths:
@@ -317,7 +361,9 @@ class VoiceMemoDetector:
                     logger.debug(f"Found voice file by search: {path}")
                     return path
         except Exception as e:
-            logger.debug(f"Error searching for voice file {voice_filename}: {e}")
+            logger.debug(
+                f"Error searching for voice file {voice_filename}: {e}"
+            )
 
         return None
 

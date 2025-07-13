@@ -118,7 +118,7 @@ jobs:
     - name: Run comprehensive linting
       run: |
         echo "=== Running flake8 ==="
-        flake8 src/ tests/ main.py --max-line-length=127 --extend-ignore=E203,W503
+        flake8 src/ tests/ main.py
         
         echo "=== Running black (check only) ==="
         black --check src/ tests/ main.py

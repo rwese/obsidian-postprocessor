@@ -36,7 +36,9 @@ def suppress_frontmatter_errors():
 class StatelessStateManager:
     """Manages processing state through frontmatter in Obsidian notes."""
 
-    def __init__(self, vault_path: Path, frontmatter_error_level: str = "WARNING"):
+    def __init__(
+        self, vault_path: Path, frontmatter_error_level: str = "WARNING"
+    ):
         self.vault_path = vault_path
         self.vault = None
         self.frontmatter_error_level = frontmatter_error_level
@@ -47,10 +49,14 @@ class StatelessStateManager:
         try:
             if self.suppress_frontmatter_errors:
                 with suppress_frontmatter_errors():
-                    self.vault = otools.Vault(self.vault_path).connect().gather()
+                    self.vault = (
+                        otools.Vault(self.vault_path).connect().gather()
+                    )
             else:
                 self.vault = otools.Vault(self.vault_path).connect().gather()
-            logger.info(f"Connected to vault for state management: {self.vault_path}")
+            logger.info(
+                f"Connected to vault for state management: {self.vault_path}"
+            )
             return self
         except Exception as e:
             logger.error(f"Failed to connect to vault {self.vault_path}: {e}")
@@ -82,24 +88,35 @@ class StatelessStateManager:
                 # Check if the note actually has frontmatter that failed to parse
                 if self._has_malformed_frontmatter(note_path):
                     self._log_frontmatter_error(
-                        f"Frontmatter parsing error in {note_path}: malformed YAML - continuing with empty processed list"
+                        f"Frontmatter parsing error in {note_path}: "
+                        f"malformed YAML - continuing with empty processed list"
                     )
-                logger.debug(f"No frontmatter found in {note_path}, returning empty processed list")
+                logger.debug(
+                    f"No frontmatter found in {note_path}, returning empty processed list"
+                )
                 return []
 
             processed = frontmatter.get("processed_recordings", [])
             if not isinstance(processed, list):
                 self._log_frontmatter_error(
-                    f"Invalid processed_recordings format in {note_path}, expected list, got {type(processed)} - continuing with empty processed list"
+                    f"Invalid processed_recordings format in {note_path}, "
+                    f"expected list, got {type(processed)} - "
+                    f"continuing with empty processed list"
                 )
                 return []
 
-            logger.debug(f"Found {len(processed)} processed recordings in {note_path}: {processed}")
+            logger.debug(
+                f"Found {len(processed)} processed recordings in {note_path}: {processed}"
+            )
             return processed
 
         except Exception as e:
             # Check if it's a YAML parsing error from obsidiantools
-            if "ParserError" in str(e) or "while parsing" in str(e) or "yaml" in str(e).lower():
+            if (
+                "ParserError" in str(e)
+                or "while parsing" in str(e)
+                or "yaml" in str(e).lower()
+            ):
                 self._log_frontmatter_error(
                     f"Frontmatter parsing error in {note_path}: {e} - continuing with empty processed list"
                 )
@@ -184,7 +201,9 @@ class StatelessStateManager:
 
         return unprocessed
 
-    def mark_recording_processed(self, note_path: str, recording_filename: str) -> bool:
+    def mark_recording_processed(
+        self, note_path: str, recording_filename: str
+    ) -> bool:
         """
         Mark a recording as processed by updating frontmatter.
 
@@ -233,7 +252,9 @@ class StatelessStateManager:
             # Reload the vault to pick up the changes
             if self.suppress_frontmatter_errors:
                 with suppress_frontmatter_errors():
-                    self.vault = otools.Vault(self.vault_path).connect().gather()
+                    self.vault = (
+                        otools.Vault(self.vault_path).connect().gather()
+                    )
             else:
                 self.vault = otools.Vault(self.vault_path).connect().gather()
 
@@ -276,7 +297,7 @@ class StatelessStateManager:
 
             # Extract and parse frontmatter
             frontmatter_text = "\n".join(lines[1:end_idx])
-            body = "\n".join(lines[end_idx + 1 :])
+            body = "\n".join(lines[end_idx + 1:])
 
             if not frontmatter_text.strip():
                 # Empty frontmatter
@@ -304,7 +325,9 @@ class StatelessStateManager:
             logger.error(f"Unexpected error parsing frontmatter: {e}")
             return {}, content
 
-    def _serialize_frontmatter(self, frontmatter: Dict[str, Any], body: str) -> str:
+    def _serialize_frontmatter(
+        self, frontmatter: Dict[str, Any], body: str
+    ) -> str:
         """
         Serialize frontmatter and body back to note content.
 
@@ -360,7 +383,9 @@ class StatelessStateManager:
             broken = self.get_broken_recordings(note_path)
             stats["processed_recordings"] += len(processed)
             stats["broken_recordings"] += len(broken)
-            unprocessed = self.get_unprocessed_recordings(note_path, recordings)
+            unprocessed = self.get_unprocessed_recordings(
+                note_path, recordings
+            )
             stats["unprocessed_recordings"] += len(unprocessed)
 
         return stats
@@ -395,7 +420,14 @@ class StatelessStateManager:
             search_paths.append(note_file)
 
         # 4. Try common subdirectories
-        for subdir in ["Notes", "notes", "Pages", "pages", "Daily Notes", "Templates"]:
+        for subdir in [
+            "Notes",
+            "notes",
+            "Pages",
+            "pages",
+            "Daily Notes",
+            "Templates",
+        ]:
             search_paths.append(self.vault_path / subdir / f"{note_path}.md")
 
         # Try each path and return the first one that exists
@@ -426,7 +458,9 @@ class StatelessStateManager:
             # Also try recursive search with rglob
             for path in self.vault_path.rglob(f"{note_name}.md"):
                 if path.is_file():
-                    logger.debug(f"Found note file by recursive search: {path}")
+                    logger.debug(
+                        f"Found note file by recursive search: {path}"
+                    )
                     return path
 
         except Exception as e:
@@ -457,32 +491,47 @@ class StatelessStateManager:
                 frontmatter = self.vault.get_front_matter(note_path)
 
             if not frontmatter:
-                logger.debug(f"No frontmatter found in {note_path}, returning empty broken list")
+                logger.debug(
+                    f"No frontmatter found in {note_path}, returning empty broken list"
+                )
                 return []
 
             broken = frontmatter.get("broken_recordings", [])
             if not isinstance(broken, list):
                 self._log_frontmatter_error(
-                    f"Invalid broken_recordings format in {note_path}, expected list, got {type(broken)} - continuing with empty broken list"
+                    f"Invalid broken_recordings format in {note_path}, "
+                    f"expected list, got {type(broken)} - "
+                    f"continuing with empty broken list"
                 )
                 return []
 
-            logger.debug(f"Found {len(broken)} broken recordings in {note_path}: {broken}")
+            logger.debug(
+                f"Found {len(broken)} broken recordings in {note_path}: {broken}"
+            )
             return broken
 
         except Exception as e:
-            if "ParserError" in str(e) or "while parsing" in str(e) or "yaml" in str(e).lower():
+            if (
+                "ParserError" in str(e)
+                or "while parsing" in str(e)
+                or "yaml" in str(e).lower()
+            ):
                 self._log_frontmatter_error(
                     f"Frontmatter parsing error in {note_path}: {e} - continuing with empty broken list"
                 )
                 return []
             else:
                 # For non-frontmatter errors, log as warning but continue processing
-                logger.warning(f"Error getting broken recordings from {note_path}: {e} - continuing with empty broken list")
+                logger.warning(
+                    f"Error getting broken recordings from {note_path}: {e} - continuing with empty broken list"
+                )
                 return []
 
     def mark_recording_broken(
-        self, note_path: str, recording_filename: str, error_message: str = None
+        self,
+        note_path: str,
+        recording_filename: str,
+        error_message: str = None,
     ) -> bool:
         """
         Mark a recording as broken by updating frontmatter.
@@ -516,7 +565,9 @@ class StatelessStateManager:
 
             if recording_filename not in frontmatter["broken_recordings"]:
                 frontmatter["broken_recordings"].append(recording_filename)
-                frontmatter["broken_recordings"].sort()  # Keep sorted for consistency
+                frontmatter[
+                    "broken_recordings"
+                ].sort()  # Keep sorted for consistency
 
             # Add error timestamp and message if provided
             if error_message:
@@ -545,7 +596,9 @@ class StatelessStateManager:
             # Reload the vault to pick up the changes
             if self.suppress_frontmatter_errors:
                 with suppress_frontmatter_errors():
-                    self.vault = otools.Vault(self.vault_path).connect().gather()
+                    self.vault = (
+                        otools.Vault(self.vault_path).connect().gather()
+                    )
             else:
                 self.vault = otools.Vault(self.vault_path).connect().gather()
 

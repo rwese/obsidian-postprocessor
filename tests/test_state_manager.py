@@ -301,7 +301,9 @@ This is the body content.
 
             # Create notes in different locations
             (vault_path / "Root Note.md").write_text("Root note content")
-            (notes_dir / "Subdirectory Note.md").write_text("Subdirectory note content")
+            (notes_dir / "Subdirectory Note.md").write_text(
+                "Subdirectory note content"
+            )
             (daily_dir / "Voice note test.md").write_text("Daily note content")
 
             manager = StatelessStateManager(vault_path)
@@ -461,7 +463,9 @@ This is a test note with voice recordings.
             assert stats["total_notes"] == 2
             assert stats["total_recordings"] == 4
             assert stats["processed_recordings"] == 2  # From 'Processed Note'
-            assert stats["broken_recordings"] == 1  # Recording003.wav marked as broken
+            assert (
+                stats["broken_recordings"] == 1
+            )  # Recording003.wav marked as broken
             assert (
                 stats["unprocessed_recordings"] == 1
             )  # Only Recording004.webm from 'No Frontmatter'
@@ -492,7 +496,7 @@ This is a test note with voice recordings.
     def test_reprocessing_after_frontmatter_removal(self):
         """
         Test that removing 'processed' info from frontmatter allows reprocessing.
-        
+
         This is a regression test for the bug where recordings don't get reprocessed
         after the 'processed_recordings' field is manually removed from frontmatter.
         """
@@ -518,19 +522,21 @@ This is a test note with voice recordings.
             unprocessed = manager.get_unprocessed_recordings(
                 "No Frontmatter", all_recordings
             )
-            assert len(unprocessed) == 0  # Should be empty since it's processed
+            assert (
+                len(unprocessed) == 0
+            )  # Should be empty since it's processed
 
             # Step 3: Manually remove the processed_recordings from frontmatter
             # This simulates user manually editing the note
             note_path = vault_path / "No Frontmatter.md"
             with open(note_path, "r", encoding="utf-8") as f:
                 content = f.read()
-            
+
             # Parse and modify frontmatter to remove processed_recordings
             frontmatter, body = manager._parse_frontmatter(content)
             if "processed_recordings" in frontmatter:
                 del frontmatter["processed_recordings"]
-            
+
             # Write back the modified content
             new_content = manager._serialize_frontmatter(frontmatter, body)
             with open(note_path, "w", encoding="utf-8") as f:

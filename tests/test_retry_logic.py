@@ -57,8 +57,8 @@ This note has an unprocessed recording.
     def test_retry_on_script_failure(self, caplog):
         """Test retry logic when script execution fails."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            vault_path, processor_path = self.create_test_vault_with_unprocessed(
-                temp_dir
+            vault_path, processor_path = (
+                self.create_test_vault_with_unprocessed(temp_dir)
             )
 
             # Set up config using environment variables
@@ -76,8 +76,14 @@ This note has an unprocessed recording.
                 processor = ObsidianProcessor(config)
 
                 # Mock the script runner to fail first 2 attempts, succeed on 3rd
-                with patch.object(processor.script_runner, "run_script") as mock_run:
-                    mock_run.side_effect = [False, False, True]  # Fail, Fail, Success
+                with patch.object(
+                    processor.script_runner, "run_script"
+                ) as mock_run:
+                    mock_run.side_effect = [
+                        False,
+                        False,
+                        True,
+                    ]  # Fail, Fail, Success
 
                     # Connect processor
                     processor.connect()
@@ -98,15 +104,20 @@ This note has an unprocessed recording.
                     assert mock_run.call_count == 3
 
                     # Check log messages for retry attempts
-                    log_messages = [record.message for record in caplog.records]
+                    log_messages = [
+                        record.message for record in caplog.records
+                    ]
                     assert any(
-                        "Processing: Recording001.webm" in msg for msg in log_messages
+                        "Processing: Recording001.webm" in msg
+                        for msg in log_messages
                     )
                     assert any(
-                        "Retry 1/2: Recording001.webm" in msg for msg in log_messages
+                        "Retry 1/2: Recording001.webm" in msg
+                        for msg in log_messages
                     )
                     assert any(
-                        "Retry 2/2: Recording001.webm" in msg for msg in log_messages
+                        "Retry 2/2: Recording001.webm" in msg
+                        for msg in log_messages
                     )
                     assert any(
                         "Successfully processed: Recording001.webm" in msg
@@ -116,8 +127,8 @@ This note has an unprocessed recording.
     def test_retry_exhausted_failure(self, caplog):
         """Test when all retry attempts are exhausted."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            vault_path, processor_path = self.create_test_vault_with_unprocessed(
-                temp_dir
+            vault_path, processor_path = (
+                self.create_test_vault_with_unprocessed(temp_dir)
             )
 
             # Set up config using environment variables
@@ -135,7 +146,9 @@ This note has an unprocessed recording.
                 processor = ObsidianProcessor(config)
 
                 # Mock the script runner to always fail
-                with patch.object(processor.script_runner, "run_script") as mock_run:
+                with patch.object(
+                    processor.script_runner, "run_script"
+                ) as mock_run:
                     mock_run.return_value = False  # Always fail
 
                     # Connect processor
@@ -157,17 +170,20 @@ This note has an unprocessed recording.
                     assert mock_run.call_count == 3
 
                     # Check log messages for all retry attempts
-                    log_messages = [record.message for record in caplog.records]
+                    log_messages = [
+                        record.message for record in caplog.records
+                    ]
                     assert any(
-                        "Failed to process Recording001.webm after 3 attempts" in msg
+                        "Failed to process Recording001.webm after 3 attempts"
+                        in msg
                         for msg in log_messages
                     )
 
     def test_exception_handling_with_retry(self, caplog):
         """Test exception handling with retry logic."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            vault_path, processor_path = self.create_test_vault_with_unprocessed(
-                temp_dir
+            vault_path, processor_path = (
+                self.create_test_vault_with_unprocessed(temp_dir)
             )
 
             # Set up config using environment variables
@@ -185,7 +201,9 @@ This note has an unprocessed recording.
                 processor = ObsidianProcessor(config)
 
                 # Mock the script runner to raise exception first 2 times, succeed on 3rd
-                with patch.object(processor.script_runner, "run_script") as mock_run:
+                with patch.object(
+                    processor.script_runner, "run_script"
+                ) as mock_run:
                     mock_run.side_effect = [
                         Exception("Network error"),
                         Exception("Timeout error"),
@@ -211,7 +229,9 @@ This note has an unprocessed recording.
                     assert mock_run.call_count == 3
 
                     # Check log messages for exception handling
-                    log_messages = [record.message for record in caplog.records]
+                    log_messages = [
+                        record.message for record in caplog.records
+                    ]
                     assert any(
                         "Error processing recording Recording001.webm" in msg
                         for msg in log_messages
@@ -220,8 +240,8 @@ This note has an unprocessed recording.
     def test_robust_batch_processing(self, caplog):
         """Test robust batch processing doesn't get stuck on errors."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            vault_path, processor_path = self.create_test_vault_with_unprocessed(
-                temp_dir
+            vault_path, processor_path = (
+                self.create_test_vault_with_unprocessed(temp_dir)
             )
 
             # Create additional test files
@@ -264,7 +284,9 @@ title: Note 3
                 processor = ObsidianProcessor(config)
 
                 # Mock script runner: fail first recording, succeed others
-                with patch.object(processor.script_runner, "run_script") as mock_run:
+                with patch.object(
+                    processor.script_runner, "run_script"
+                ) as mock_run:
                     mock_run.side_effect = [
                         False,
                         False,
@@ -288,7 +310,9 @@ title: Note 3
                     assert results["failed_processing"] == 1
 
                     # Should have tried all recordings and not gotten stuck
-                    log_messages = [record.message for record in caplog.records]
+                    log_messages = [
+                        record.message for record in caplog.records
+                    ]
                     assert any(
                         "Processing completed: 2 successful, 1 failed" in msg
                         for msg in log_messages
@@ -297,8 +321,8 @@ title: Note 3
     def test_state_management_error_no_retry(self, caplog):
         """Test that state management errors don't trigger retries."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            vault_path, processor_path = self.create_test_vault_with_unprocessed(
-                temp_dir
+            vault_path, processor_path = (
+                self.create_test_vault_with_unprocessed(temp_dir)
             )
 
             # Set up config using environment variables
@@ -344,7 +368,9 @@ title: Note 3
                     assert mock_mark.call_count == 1
 
                     # Check log messages
-                    log_messages = [record.message for record in caplog.records]
+                    log_messages = [
+                        record.message for record in caplog.records
+                    ]
                     assert any(
                         "Failed to mark recording as processed" in msg
                         for msg in log_messages

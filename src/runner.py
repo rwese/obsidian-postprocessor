@@ -30,7 +30,9 @@ class ScriptRunner:
 
         # Check if it's a Python script
         if self.script_path.suffix not in [".py", ".pyw"]:
-            logger.warning(f"Script may not be a Python file: {self.script_path}")
+            logger.warning(
+                f"Script may not be a Python file: {self.script_path}"
+            )
 
     def run_script(
         self,
@@ -85,14 +87,20 @@ class ScriptRunner:
 
             # Check return code
             if result.returncode == 0:
-                logger.info(f"Script executed successfully for {voice_file_path}")
+                logger.info(
+                    f"Script executed successfully for {voice_file_path}"
+                )
                 return True
             else:
-                logger.error(f"Script failed with return code {result.returncode}")
+                logger.error(
+                    f"Script failed with return code {result.returncode}"
+                )
                 return False
 
         except subprocess.TimeoutExpired:
-            logger.error(f"Script execution timed out after {self.timeout} seconds")
+            logger.error(
+                f"Script execution timed out after {self.timeout} seconds"
+            )
             return False
         except subprocess.CalledProcessError as e:
             logger.error(f"Script execution failed: {e}")
@@ -149,7 +157,12 @@ class ScriptRunner:
                 return True
 
             # If --help doesn't work, try with dummy args to check error message
-            cmd = ["python", str(self.script_path), "dummy_note.md", "dummy_voice.webm"]
+            cmd = [
+                "python",
+                str(self.script_path),
+                "dummy_note.md",
+                "dummy_voice.webm",
+            ]
 
             result = subprocess.run(
                 cmd,
@@ -160,7 +173,10 @@ class ScriptRunner:
             )
 
             # Check if script accepts the arguments (even if it fails due to dummy files)
-            if "usage:" in result.stderr.lower() or "error:" in result.stderr.lower():
+            if (
+                "usage:" in result.stderr.lower()
+                or "error:" in result.stderr.lower()
+            ):
                 logger.debug("Script appears to accept expected arguments")
                 return True
 

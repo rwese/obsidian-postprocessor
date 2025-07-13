@@ -103,7 +103,9 @@ class TestConfig:
 
             try:
                 config = Config()
-                with pytest.raises(ValueError, match="Vault path does not exist"):
+                with pytest.raises(
+                    ValueError, match="Vault path does not exist"
+                ):
                     config.validate()
             finally:
                 del os.environ["VAULT_PATH"]
@@ -116,11 +118,15 @@ class TestConfig:
             vault_path.mkdir()
 
             os.environ["VAULT_PATH"] = str(vault_path)
-            os.environ["PROCESSOR_SCRIPT_PATH"] = str(Path(temp_dir) / "nonexistent.py")
+            os.environ["PROCESSOR_SCRIPT_PATH"] = str(
+                Path(temp_dir) / "nonexistent.py"
+            )
 
             try:
                 config = Config()
-                with pytest.raises(ValueError, match="Processor script does not exist"):
+                with pytest.raises(
+                    ValueError, match="Processor script does not exist"
+                ):
                     config.validate()
             finally:
                 del os.environ["VAULT_PATH"]

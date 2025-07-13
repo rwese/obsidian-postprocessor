@@ -30,7 +30,8 @@ class Config:
     def _get_processor_script_path(self) -> Path:
         """Get processor script path from environment or default."""
         script_path = os.getenv(
-            "PROCESSOR_SCRIPT_PATH", "./processor/add_transcript_to_voicememo.py"
+            "PROCESSOR_SCRIPT_PATH",
+            "./processor/add_transcript_to_voicememo.py",
         )
         return Path(script_path).resolve()
 
@@ -61,12 +62,24 @@ class Config:
 
     def _get_watch_mode(self) -> bool:
         """Get watch mode from environment or default."""
-        return os.getenv("WATCH_MODE", "false").lower() in ("true", "1", "yes", "on")
+        return os.getenv("WATCH_MODE", "false").lower() in (
+            "true",
+            "1",
+            "yes",
+            "on",
+        )
 
     def _get_frontmatter_error_level(self) -> str:
         """Get frontmatter error handling level from environment or default."""
         level = os.getenv("FRONTMATTER_ERROR_LEVEL", "WARNING").upper()
-        valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL", "SILENT"]
+        valid_levels = [
+            "DEBUG",
+            "INFO",
+            "WARNING",
+            "ERROR",
+            "CRITICAL",
+            "SILENT",
+        ]
         if level not in valid_levels:
             raise ValueError(
                 f"Invalid frontmatter error level: {level}. Must be one of: {valid_levels}"
@@ -75,7 +88,12 @@ class Config:
 
     def _get_debug_voice_detection(self) -> bool:
         """Get debug voice detection flag from environment or default."""
-        return os.getenv("DEBUG_VOICE_DETECTION", "false").lower() in ("true", "1", "yes", "on")
+        return os.getenv("DEBUG_VOICE_DETECTION", "false").lower() in (
+            "true",
+            "1",
+            "yes",
+            "on",
+        )
 
     def validate(self) -> None:
         """Validate configuration."""
@@ -83,7 +101,9 @@ class Config:
             raise ValueError(f"Vault path does not exist: {self.vault_path}")
 
         if not self.vault_path.is_dir():
-            raise ValueError(f"Vault path is not a directory: {self.vault_path}")
+            raise ValueError(
+                f"Vault path is not a directory: {self.vault_path}"
+            )
 
         if not self.processor_script_path.exists():
             raise ValueError(
