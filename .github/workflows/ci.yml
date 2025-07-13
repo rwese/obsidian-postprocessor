@@ -197,7 +197,7 @@ jobs:
         from src.voice_memo_detector import VoiceMemoDetector
         from src.state_manager import StatelessStateManager
         from src.runner import ScriptRunner
-        print('✓ All modules imported successfully on ${{ matrix.os }}')
+        print('All modules imported successfully on ${{ matrix.os }}')
         "
 
     - name: Create distribution package
