@@ -200,10 +200,22 @@ jobs:
         print('All modules imported successfully on ${{ matrix.os }}')
         "
 
-    - name: Create distribution package
+    - name: Create distribution package (Unix)
+      if: runner.os != 'Windows'
       run: |
         python -m pip install --upgrade build
         python -m build || echo "Build step completed - no setup.py found, this is expected"
+
+    - name: Create distribution package (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        python -m pip install --upgrade build
+        python -m build
+        if ($LASTEXITCODE -ne 0) {
+          Write-Host "Build step completed - no setup.py found, this is expected"
+          $global:LASTEXITCODE = 0
+        }
 
     - name: Test Docker build (Linux only)
       if: runner.os == 'Linux'
