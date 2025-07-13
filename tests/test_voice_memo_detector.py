@@ -8,9 +8,9 @@ from pathlib import Path
 
 import pytest
 
-# Add src to path
+# Add src to path first
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
+# flake8: noqa: E402
 from src.voice_memo_detector import VoiceMemoDetector
 
 

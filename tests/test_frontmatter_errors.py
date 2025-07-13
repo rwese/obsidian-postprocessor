@@ -7,9 +7,9 @@ import sys
 import tempfile
 from pathlib import Path
 
-# Add src to path
+# Add src to path first
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
+# flake8: noqa: E402
 from src.state_manager import StatelessStateManager
 
 
