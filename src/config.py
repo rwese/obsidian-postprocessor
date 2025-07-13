@@ -45,9 +45,7 @@ class Config:
         method = os.getenv("STATE_METHOD", "frontmatter")
         valid_methods = ["frontmatter", "vault_file", "inline"]
         if method not in valid_methods:
-            raise ValueError(
-                f"Invalid state method: {method}. Must be one of: {valid_methods}"
-            )
+            raise ValueError(f"Invalid state method: {method}. Must be one of: {valid_methods}")
         return method
 
     def _get_log_level(self) -> str:
@@ -55,9 +53,7 @@ class Config:
         level = os.getenv("LOG_LEVEL", "INFO").upper()
         valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
         if level not in valid_levels:
-            raise ValueError(
-                f"Invalid log level: {level}. Must be one of: {valid_levels}"
-            )
+            raise ValueError(f"Invalid log level: {level}. Must be one of: {valid_levels}")
         return level
 
     def _get_watch_mode(self) -> bool:
@@ -81,9 +77,7 @@ class Config:
             "SILENT",
         ]
         if level not in valid_levels:
-            raise ValueError(
-                f"Invalid frontmatter error level: {level}. Must be one of: {valid_levels}"
-            )
+            raise ValueError(f"Invalid frontmatter error level: {level}. Must be one of: {valid_levels}")
         return level
 
     def _get_debug_voice_detection(self) -> bool:
@@ -104,14 +98,10 @@ class Config:
             raise ValueError(f"Vault path is not a directory: {self.vault_path}")
 
         if not self.processor_script_path.exists():
-            raise ValueError(
-                f"Processor script does not exist: {self.processor_script_path}"
-            )
+            raise ValueError(f"Processor script does not exist: {self.processor_script_path}")
 
         if not self.processor_script_path.is_file():
-            raise ValueError(
-                f"Processor script is not a file: {self.processor_script_path}"
-            )
+            raise ValueError(f"Processor script is not a file: {self.processor_script_path}")
 
     def __str__(self) -> str:
         """String representation of configuration."""

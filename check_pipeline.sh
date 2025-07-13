@@ -24,25 +24,25 @@ LATEST_RUN_ID=$(gh run list --workflow="$WORKFLOW_NAME" --limit=1 --json databas
 
 if [ -n "$LATEST_RUN_ID" ] && [ "$LATEST_RUN_ID" != "null" ]; then
     echo "Run ID: $LATEST_RUN_ID"
-    
+
     # Get run status
     RUN_STATUS=$(gh run view "$LATEST_RUN_ID" --json status,conclusion,createdAt,headBranch,event,jobs --jq '.status')
     RUN_CONCLUSION=$(gh run view "$LATEST_RUN_ID" --json status,conclusion,createdAt,headBranch,event,jobs --jq '.conclusion // "in_progress"')
-    
+
     echo "Status: $RUN_STATUS"
     echo "Conclusion: $RUN_CONCLUSION"
-    
+
     # Show job summary
     echo
     echo "📋 Job Summary:"
     gh run view "$LATEST_RUN_ID" --json jobs --jq '.jobs[] | "\(.name): \(.status) (\(.conclusion // "running"))"'
-    
+
     # If completed, show summary
     if [ "$RUN_STATUS" = "completed" ]; then
         echo
         if [ "$RUN_CONCLUSION" = "success" ]; then
             echo "✅ Pipeline completed successfully!"
-            
+
             # Check if docker-publish job ran
             DOCKER_JOB_STATUS=$(gh run view "$LATEST_RUN_ID" --json jobs --jq '.jobs[] | select(.name == "docker-publish") | .conclusion // "not_found"')
             if [ "$DOCKER_JOB_STATUS" = "success" ]; then
@@ -57,7 +57,7 @@ if [ -n "$LATEST_RUN_ID" ] && [ "$LATEST_RUN_ID" != "null" ]; then
             fi
         else
             echo "❌ Pipeline failed with conclusion: $RUN_CONCLUSION"
-            
+
             # Show failed jobs
             echo
             echo "💥 Failed jobs:"
@@ -65,13 +65,13 @@ if [ -n "$LATEST_RUN_ID" ] && [ "$LATEST_RUN_ID" != "null" ]; then
         fi
     else
         echo "⏳ Pipeline is still running..."
-        
+
         # Show running jobs
         echo
         echo "🏃 Currently running jobs:"
         gh run view "$LATEST_RUN_ID" --json jobs --jq '.jobs[] | select(.status == "in_progress") | "\(.name): \(.status)"'
     fi
-    
+
     echo
     echo "🔗 View full details: $(gh run view "$LATEST_RUN_ID" --json url --jq '.url')"
 else

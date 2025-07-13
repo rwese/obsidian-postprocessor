@@ -14,8 +14,3 @@ tags:
 ```dataview
 task from #todo where (due <= date(now) or !due) and !completed
 ```
-
-
-
-
-

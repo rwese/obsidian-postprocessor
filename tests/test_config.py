@@ -23,10 +23,7 @@ class TestConfig:
         config = Config()
 
         assert config.vault_path == Path("./testvault/test-vault").resolve()
-        assert (
-            config.processor_script_path
-            == Path("./processor/add_transcript_to_voicememo.py").resolve()
-        )
+        assert config.processor_script_path == Path("./processor/add_transcript_to_voicememo.py").resolve()
         assert config.voice_patterns == ["*.webm", "*.mp3", "*.wav", "*.m4a"]
         assert config.state_method == "frontmatter"
         assert config.log_level == "INFO"

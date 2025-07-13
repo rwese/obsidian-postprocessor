@@ -101,9 +101,7 @@ class ScriptRunner:
             logger.error(f"Unexpected error executing script: {e}")
             return False
 
-    def _prepare_environment(
-        self, env_vars: Optional[Dict[str, str]] = None
-    ) -> Dict[str, str]:
+    def _prepare_environment(self, env_vars: Optional[Dict[str, str]] = None) -> Dict[str, str]:
         """
         Prepare environment variables for script execution.
 

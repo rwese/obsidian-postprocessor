@@ -11,6 +11,3 @@ tags:
 # Good Things
 
 # Thanks For
-
-
-

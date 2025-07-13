@@ -137,5 +137,26 @@ f"continuation"
 
 ### Pipeline Commands
 - `./venv/bin/python -m flake8 src/ tests/ main.py` - Lint with project config
+- `./venv/bin/python -m black src/ tests/ main.py` - Auto-format code
+- `./venv/bin/python -m isort src/ tests/ main.py` - Sort imports
 - CI automatically uses `.flake8` configuration file
 - Black and isort used for code formatting in pipeline
+
+### Pre-commit Hooks Setup
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+**Pre-commit Hook Features:**
+- Automatic code formatting with Black (120 char line length)
+- Import sorting with isort
+- Flake8 linting with project configuration
+- Basic file checks (trailing whitespace, YAML validation, etc.)
+- Fast pytest execution with fail-fast (-x flag)
+
+**Manual Hook Execution:**
+```bash
+pre-commit run --all-files  # Run on all files
+pre-commit run flake8       # Run specific hook
+```

@@ -138,16 +138,12 @@ And an image:
             detector.connect()
 
             # Test existing file
-            voice_path = detector.get_voice_file_path(
-                "Voice Memo 1", "Recording001.webm"
-            )
+            voice_path = detector.get_voice_file_path("Voice Memo 1", "Recording001.webm")
             assert voice_path.exists()
             assert voice_path.name == "Recording001.webm"
 
             # Test non-existing file
-            voice_path = detector.get_voice_file_path(
-                "Voice Memo 1", "NonExistent.webm"
-            )
+            voice_path = detector.get_voice_file_path("Voice Memo 1", "NonExistent.webm")
             assert not voice_path.exists()
             assert voice_path.name == "NonExistent.webm"
 
@@ -177,9 +173,7 @@ And an image:
 
             # Should still have Mixed Content, but Voice Memo 1 should have fewer files
             assert len(verified_notes) == 2
-            assert (
-                len(verified_notes["Voice Memo 1"]) == 1
-            )  # Only Recording002.mp3 remains
+            assert len(verified_notes["Voice Memo 1"]) == 1  # Only Recording002.mp3 remains
             assert len(verified_notes["Mixed Content"]) == 1
 
     def test_connection_required(self):

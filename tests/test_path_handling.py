@@ -87,9 +87,7 @@ This note has a voice file in the same subfolder.
             detector = VoiceMemoDetector(vault_path, ["*.webm"])
 
             # Test root voice file resolution
-            voice_path = detector.get_voice_file_path(
-                "Root Note", "root_recording.webm"
-            )
+            voice_path = detector.get_voice_file_path("Root Note", "root_recording.webm")
             expected_path = vault_path / "root_recording.webm"
 
             assert voice_path == expected_path
@@ -103,9 +101,7 @@ This note has a voice file in the same subfolder.
             detector = VoiceMemoDetector(vault_path, ["*.webm"])
 
             # Test attachments voice file resolution
-            voice_path = detector.get_voice_file_path(
-                "Attachments Note", "attachments_recording.webm"
-            )
+            voice_path = detector.get_voice_file_path("Attachments Note", "attachments_recording.webm")
             expected_path = vault_path / "attachments" / "attachments_recording.webm"
 
             assert voice_path == expected_path
@@ -119,9 +115,7 @@ This note has a voice file in the same subfolder.
             detector = VoiceMemoDetector(vault_path, ["*.webm"])
 
             # Test subdirectory voice file resolution (obsidiantools returns just filename)
-            voice_path = detector.get_voice_file_path(
-                "Subfolder Note", "subdir_recording.webm"
-            )
+            voice_path = detector.get_voice_file_path("Subfolder Note", "subdir_recording.webm")
             expected_path = vault_path / "subfolder" / "subdir_recording.webm"
 
             assert voice_path == expected_path
@@ -135,9 +129,7 @@ This note has a voice file in the same subfolder.
             detector = VoiceMemoDetector(vault_path, ["*.webm"])
 
             # Test missing voice file resolution
-            voice_path = detector.get_voice_file_path(
-                "Root Note", "missing_recording.webm"
-            )
+            voice_path = detector.get_voice_file_path("Root Note", "missing_recording.webm")
             expected_path = vault_path / "missing_recording.webm"
 
             assert voice_path == expected_path
@@ -166,9 +158,7 @@ This note has a voice file in the same subfolder.
             # Check specific notes
             assert "Root Note" in verified_notes
             assert "Attachments Note" in verified_notes
-            assert (
-                "Subfolder Note" in verified_notes
-            )  # obsidiantools returns just the filename
+            assert "Subfolder Note" in verified_notes  # obsidiantools returns just the filename
 
             # Check that each note has its expected voice file
             assert "root_recording.webm" in verified_notes["Root Note"]

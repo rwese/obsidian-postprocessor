@@ -30,25 +30,15 @@ def setup_logging(log_level: str):
 
 def main():
     """Main entry point."""
-    parser = argparse.ArgumentParser(
-        description="Obsidian Post-Processor: Process voice memos in Obsidian vaults"
-    )
+    parser = argparse.ArgumentParser(description="Obsidian Post-Processor: Process voice memos in Obsidian vaults")
 
-    parser.add_argument(
-        "--dry-run", action="store_true", help="Analyze vault without executing scripts"
-    )
+    parser.add_argument("--dry-run", action="store_true", help="Analyze vault without executing scripts")
 
-    parser.add_argument(
-        "--note", type=str, help="Process specific note (relative path within vault)"
-    )
+    parser.add_argument("--note", type=str, help="Process specific note (relative path within vault)")
 
-    parser.add_argument(
-        "--status", action="store_true", help="Show vault status without processing"
-    )
+    parser.add_argument("--status", action="store_true", help="Show vault status without processing")
 
-    parser.add_argument(
-        "--config", action="store_true", help="Show configuration and exit"
-    )
+    parser.add_argument("--config", action="store_true", help="Show configuration and exit")
 
     parser.add_argument(
         "--validate",

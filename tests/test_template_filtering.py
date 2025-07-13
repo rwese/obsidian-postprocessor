@@ -134,9 +134,7 @@ This is another regular note with a voice memo.
             # Verify template notes are not in results
             note_paths = list(notes_with_memos.keys())
             template_notes = [
-                path
-                for path in note_paths
-                if path.startswith("templates/") or path.startswith("Templates/")
+                path for path in note_paths if path.startswith("templates/") or path.startswith("Templates/")
             ]
 
             assert len(template_notes) == 0, f"Found template notes: {template_notes}"
@@ -174,9 +172,7 @@ This is another regular note with a voice memo.
 
             # Test cases - now using just note names as that's what obsidiantools provides
             assert detector._should_ignore_note("My Template") is True  # In templates/
-            assert (
-                detector._should_ignore_note("Nested Template") is True
-            )  # In subfolder/Templates/
+            assert detector._should_ignore_note("Nested Template") is True  # In subfolder/Templates/
 
             # Regular notes should not be ignored
             assert detector._should_ignore_note("Regular Note") is False

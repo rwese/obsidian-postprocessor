@@ -89,13 +89,8 @@ class VoiceMemoDetector:
                     normalized_path = rel_filepath_str.replace("\\", "/").lower()
 
                     # Check if in any templates directory (case-insensitive)
-                    if (
-                        normalized_path.startswith("templates/")
-                        or "/templates/" in normalized_path
-                    ):
-                        logger.debug(
-                            f"Ignoring template note: {note_path} (path: {rel_filepath})"
-                        )
+                    if normalized_path.startswith("templates/") or "/templates/" in normalized_path:
+                        logger.debug(f"Ignoring template note: {note_path} (path: {rel_filepath})")
                         return True
                 # Note: if note not found in metadata index, we don't ignore it
         except Exception as e:
@@ -165,9 +160,7 @@ class VoiceMemoDetector:
                         voice_files = self._extract_voice_files_from_note(note_path)
                         if voice_files:
                             notes_with_memos[note_path] = voice_files
-                            logger.debug(
-                                f"Found {len(voice_files)} voice files in {note_path}: {voice_files}"
-                            )
+                            logger.debug(f"Found {len(voice_files)} voice files in {note_path}: {voice_files}")
                         else:
                             logger.debug(f"No voice files found in {note_path}")
             else:
@@ -183,9 +176,7 @@ class VoiceMemoDetector:
                     voice_files = self._extract_voice_files_from_note(note_path)
                     if voice_files:
                         notes_with_memos[note_path] = voice_files
-                        logger.debug(
-                            f"Found {len(voice_files)} voice files in {note_path}: {voice_files}"
-                        )
+                        logger.debug(f"Found {len(voice_files)} voice files in {note_path}: {voice_files}")
                     else:
                         logger.debug(f"No voice files found in {note_path}")
 
@@ -200,9 +191,7 @@ class VoiceMemoDetector:
         )
 
         if total_notes_scanned == 0:
-            logger.warning(
-                "No notes found in vault - check vault path and .obsidian folder existence"
-            )
+            logger.warning("No notes found in vault - check vault path and .obsidian folder existence")
         elif len(notes_with_memos) == 0:
             logger.warning(
                 "No voice memos found - check voice file patterns and embedded audio syntax (![[filename.ext]])"
@@ -231,30 +220,22 @@ class VoiceMemoDetector:
                 logger.debug(f"No source text found for note: {note_path}")
                 return []
 
-            logger.debug(
-                f"Extracting voice files from note: {note_path} (content length: {len(source_text)})"
-            )
+            logger.debug(f"Extracting voice files from note: {note_path} (content length: {len(source_text)})")
 
             voice_files = []
 
             # Pattern to match Obsidian embedded files: ![[filename.ext]]
-            embed_pattern = (
-                r"!\[\[([^\]]+\.(?:" + self._voice_extension_pattern + r"))\]\]"
-            )
+            embed_pattern = r"!\[\[([^\]]+\.(?:" + self._voice_extension_pattern + r"))\]\]"
             logger.debug(f"Using regex pattern: {embed_pattern}")
 
             # First, let's find ALL embedded files
             all_embeds_pattern = r"!\[\[([^\]]+)\]\]"
             all_embeds = re.findall(all_embeds_pattern, source_text, re.IGNORECASE)
-            logger.debug(
-                f"Found {len(all_embeds)} total embedded files in {note_path}: {all_embeds}"
-            )
+            logger.debug(f"Found {len(all_embeds)} total embedded files in {note_path}: {all_embeds}")
 
             # Now find voice files specifically
             matches = re.findall(embed_pattern, source_text, re.IGNORECASE)
-            logger.debug(
-                f"Found {len(matches)} voice file matches in {note_path}: {matches}"
-            )
+            logger.debug(f"Found {len(matches)} voice file matches in {note_path}: {matches}")
 
             for match in matches:
                 voice_files.append(match)
@@ -301,15 +282,11 @@ class VoiceMemoDetector:
         # 2. Try configured attachment folder from Obsidian config
         configured_attachment_folder = self._get_attachment_folder_path()
         if configured_attachment_folder:
-            search_paths.append(
-                self.vault_path / configured_attachment_folder / voice_filename
-            )
+            search_paths.append(self.vault_path / configured_attachment_folder / voice_filename)
 
         # 3. Try same directory as the note (if note is in a subdirectory)
         note_dir = Path(note_path).parent
-        if (
-            str(note_dir) != "." and str(note_dir) != ""
-        ):  # Only if note is actually in a subdirectory
+        if str(note_dir) != "." and str(note_dir) != "":  # Only if note is actually in a subdirectory
             search_paths.append(self.vault_path / note_dir / voice_filename)
 
         # 4. Try to find voice file by searching the entire vault
@@ -343,9 +320,7 @@ class VoiceMemoDetector:
 
         return None
 
-    def verify_voice_files_exist(
-        self, notes_with_memos: Dict[str, List[str]]
-    ) -> Dict[str, List[str]]:
+    def verify_voice_files_exist(self, notes_with_memos: Dict[str, List[str]]) -> Dict[str, List[str]]:
         """
         Verify that voice files actually exist on disk.
 
@@ -366,9 +341,7 @@ class VoiceMemoDetector:
                     existing_files.append(voice_file)
                     logger.debug(f"Verified voice file exists: {voice_path}")
                 else:
-                    logger.warning(
-                        f"Voice file not found: {voice_file} for note {note_path}"
-                    )
+                    logger.warning(f"Voice file not found: {voice_file} for note {note_path}")
                     logger.warning(f"Voice file not found: {voice_path}")
 
             if existing_files:

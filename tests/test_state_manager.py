@@ -99,17 +99,13 @@ This note has empty frontmatter.
                 "Recording002.mp3",
                 "Recording003.wav",
             ]
-            unprocessed = manager.get_unprocessed_recordings(
-                "Processed Note", all_recordings
-            )
+            unprocessed = manager.get_unprocessed_recordings("Processed Note", all_recordings)
             assert len(unprocessed) == 1
             assert "Recording003.wav" in unprocessed
 
             # Note with no processed recordings
             all_recordings = ["Recording004.webm"]
-            unprocessed = manager.get_unprocessed_recordings(
-                "No Frontmatter", all_recordings
-            )
+            unprocessed = manager.get_unprocessed_recordings("No Frontmatter", all_recordings)
             assert len(unprocessed) == 1
             assert "Recording004.webm" in unprocessed
 
@@ -122,9 +118,7 @@ This note has empty frontmatter.
             manager.connect()
 
             # Mark recording as processed in note without frontmatter
-            success = manager.mark_recording_processed(
-                "No Frontmatter", "Recording004.webm"
-            )
+            success = manager.mark_recording_processed("No Frontmatter", "Recording004.webm")
             assert success
 
             # Verify it was marked
@@ -132,9 +126,7 @@ This note has empty frontmatter.
             assert "Recording004.webm" in processed
 
             # Mark another recording in same note
-            success = manager.mark_recording_processed(
-                "No Frontmatter", "Recording005.mp3"
-            )
+            success = manager.mark_recording_processed("No Frontmatter", "Recording005.mp3")
             assert success
 
             # Verify both are marked
@@ -144,9 +136,7 @@ This note has empty frontmatter.
             assert "Recording005.mp3" in processed
 
             # Mark recording as processed in note with existing frontmatter
-            success = manager.mark_recording_processed(
-                "Processed Note", "Recording003.wav"
-            )
+            success = manager.mark_recording_processed("Processed Note", "Recording003.wav")
             assert success
 
             # Verify it was added
@@ -163,15 +153,11 @@ This note has empty frontmatter.
             manager.connect()
 
             # Mark recording as processed
-            success = manager.mark_recording_processed(
-                "No Frontmatter", "Recording004.webm"
-            )
+            success = manager.mark_recording_processed("No Frontmatter", "Recording004.webm")
             assert success
 
             # Mark same recording again
-            success = manager.mark_recording_processed(
-                "No Frontmatter", "Recording004.webm"
-            )
+            success = manager.mark_recording_processed("No Frontmatter", "Recording004.webm")
             assert success
 
             # Should still only have one entry
@@ -257,9 +243,7 @@ This is the body content.
             assert stats["total_notes"] == 2
             assert stats["total_recordings"] == 4
             assert stats["processed_recordings"] == 2  # From 'Processed Note'
-            assert (
-                stats["unprocessed_recordings"] == 2
-            )  # 1 from 'Processed Note' + 1 from 'No Frontmatter'
+            assert stats["unprocessed_recordings"] == 2  # 1 from 'Processed Note' + 1 from 'No Frontmatter'
 
     def test_connection_required(self):
         """Test that connection is required before operations."""
@@ -282,9 +266,7 @@ This is the body content.
             manager.connect()
 
             # Try to mark recording for non-existent note
-            success = manager.mark_recording_processed(
-                "NonExistent Note", "Recording.webm"
-            )
+            success = manager.mark_recording_processed("NonExistent Note", "Recording.webm")
             assert not success
 
     def test_find_note_file_in_subdirectories(self):
@@ -348,9 +330,7 @@ This is a test note with voice recordings.
             manager.connect()
 
             # Should successfully mark recording as processed
-            success = manager.mark_recording_processed(
-                "Voice note test", "Recording 20250711132921.m4a"
-            )
+            success = manager.mark_recording_processed("Voice note test", "Recording 20250711132921.m4a")
             assert success
 
             # Verify it was marked
@@ -389,9 +369,7 @@ This is a test note with voice recordings.
             assert len(broken) == 0
 
             # Mark recording as broken
-            success = manager.mark_recording_broken(
-                "No Frontmatter", "broken.m4a", "File is corrupted"
-            )
+            success = manager.mark_recording_broken("No Frontmatter", "broken.m4a", "File is corrupted")
             assert success
 
             # Verify it was marked as broken
@@ -401,9 +379,7 @@ This is a test note with voice recordings.
 
             # Test that broken recordings are excluded from unprocessed
             all_recordings = ["broken.m4a", "good.m4a"]
-            unprocessed = manager.get_unprocessed_recordings(
-                "No Frontmatter", all_recordings
-            )
+            unprocessed = manager.get_unprocessed_recordings("No Frontmatter", all_recordings)
             assert "broken.m4a" not in unprocessed
             assert "good.m4a" in unprocessed
             assert len(unprocessed) == 1
@@ -417,15 +393,11 @@ This is a test note with voice recordings.
             manager.connect()
 
             # Mark recording as broken
-            success = manager.mark_recording_broken(
-                "No Frontmatter", "broken.m4a", "First error"
-            )
+            success = manager.mark_recording_broken("No Frontmatter", "broken.m4a", "First error")
             assert success
 
             # Mark same recording as broken again
-            success = manager.mark_recording_broken(
-                "No Frontmatter", "broken.m4a", "Second error"
-            )
+            success = manager.mark_recording_broken("No Frontmatter", "broken.m4a", "Second error")
             assert success
 
             # Should still only have one entry
@@ -442,9 +414,7 @@ This is a test note with voice recordings.
             manager.connect()
 
             # Mark one recording as broken
-            manager.mark_recording_broken(
-                "Processed Note", "Recording003.wav", "Corrupted file"
-            )
+            manager.mark_recording_broken("Processed Note", "Recording003.wav", "Corrupted file")
 
             # Mock notes with memos
             notes_with_memos = {
@@ -462,9 +432,7 @@ This is a test note with voice recordings.
             assert stats["total_recordings"] == 4
             assert stats["processed_recordings"] == 2  # From 'Processed Note'
             assert stats["broken_recordings"] == 1  # Recording003.wav marked as broken
-            assert (
-                stats["unprocessed_recordings"] == 1
-            )  # Only Recording004.webm from 'No Frontmatter'
+            assert stats["unprocessed_recordings"] == 1  # Only Recording004.webm from 'No Frontmatter'
 
     def test_broken_recordings_exclude_from_processing(self):
         """Test that broken recordings are excluded from unprocessed list."""
@@ -475,15 +443,11 @@ This is a test note with voice recordings.
             manager.connect()
 
             # Mark one recording as broken
-            manager.mark_recording_broken(
-                "Empty Frontmatter", "Recording005.mp3", "Corrupted"
-            )
+            manager.mark_recording_broken("Empty Frontmatter", "Recording005.mp3", "Corrupted")
 
             # Test that it's excluded from unprocessed
             all_recordings = ["Recording005.mp3", "Recording006.wav"]
-            unprocessed = manager.get_unprocessed_recordings(
-                "Empty Frontmatter", all_recordings
-            )
+            unprocessed = manager.get_unprocessed_recordings("Empty Frontmatter", all_recordings)
 
             assert "Recording005.mp3" not in unprocessed
             assert "Recording006.wav" in unprocessed
@@ -503,9 +467,7 @@ This is a test note with voice recordings.
             manager.connect()
 
             # Step 1: Mark a recording as processed
-            success = manager.mark_recording_processed(
-                "No Frontmatter", "Recording004.webm"
-            )
+            success = manager.mark_recording_processed("No Frontmatter", "Recording004.webm")
             assert success
 
             # Verify it was marked as processed
@@ -515,9 +477,7 @@ This is a test note with voice recordings.
 
             # Step 2: Verify it shows as processed (not unprocessed)
             all_recordings = ["Recording004.webm"]
-            unprocessed = manager.get_unprocessed_recordings(
-                "No Frontmatter", all_recordings
-            )
+            unprocessed = manager.get_unprocessed_recordings("No Frontmatter", all_recordings)
             assert len(unprocessed) == 0  # Should be empty since it's processed
 
             # Step 3: Manually remove the processed_recordings from frontmatter
@@ -547,22 +507,16 @@ This is a test note with voice recordings.
 
             # Step 6: Verify that the recording now shows as unprocessed
             # This is the main test - it should be available for reprocessing
-            unprocessed = manager.get_unprocessed_recordings(
-                "No Frontmatter", all_recordings
-            )
+            unprocessed = manager.get_unprocessed_recordings("No Frontmatter", all_recordings)
             assert len(unprocessed) == 1
             assert "Recording004.webm" in unprocessed
 
             # Step 7: Mark it as processed again to verify the workflow works
-            success = manager.mark_recording_processed(
-                "No Frontmatter", "Recording004.webm"
-            )
+            success = manager.mark_recording_processed("No Frontmatter", "Recording004.webm")
             assert success
 
             # Final verification
             processed = manager.get_processed_recordings("No Frontmatter")
             assert "Recording004.webm" in processed
-            unprocessed = manager.get_unprocessed_recordings(
-                "No Frontmatter", all_recordings
-            )
+            unprocessed = manager.get_unprocessed_recordings("No Frontmatter", all_recordings)
             assert len(unprocessed) == 0

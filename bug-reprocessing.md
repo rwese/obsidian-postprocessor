@@ -6,7 +6,7 @@ When a user manually removes the `processed_recordings` field from a note's fron
 ## Bug Description
 **Expected Behavior:**
 1. Audio file gets processed and marked in frontmatter as processed
-2. User manually removes `processed_recordings` field from frontmatter  
+2. User manually removes `processed_recordings` field from frontmatter
 3. On next run, audio file should be detected as unprocessed and get reprocessed
 
 **Actual Behavior:**
@@ -69,6 +69,6 @@ Until fixed, users can:
 
 ## Related Files
 - `src/state_manager.py` - State management and frontmatter handling
-- `src/voice_memo_detector.py` - Voice file detection logic  
+- `src/voice_memo_detector.py` - Voice file detection logic
 - `tests/test_state_manager.py` - Test coverage including new regression test
 - `main.py` - Entry point and processing orchestration

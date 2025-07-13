@@ -85,9 +85,7 @@ class StatelessStateManager:
                         f"Frontmatter parsing error in {note_path}: "
                         f"malformed YAML - continuing with empty processed list"
                     )
-                logger.debug(
-                    f"No frontmatter found in {note_path}, returning empty processed list"
-                )
+                logger.debug(f"No frontmatter found in {note_path}, returning empty processed list")
                 return []
 
             processed = frontmatter.get("processed_recordings", [])
@@ -99,18 +97,12 @@ class StatelessStateManager:
                 )
                 return []
 
-            logger.debug(
-                f"Found {len(processed)} processed recordings in {note_path}: {processed}"
-            )
+            logger.debug(f"Found {len(processed)} processed recordings in {note_path}: {processed}")
             return processed
 
         except Exception as e:
             # Check if it's a YAML parsing error from obsidiantools
-            if (
-                "ParserError" in str(e)
-                or "while parsing" in str(e)
-                or "yaml" in str(e).lower()
-            ):
+            if "ParserError" in str(e) or "while parsing" in str(e) or "yaml" in str(e).lower():
                 self._log_frontmatter_error(
                     f"Frontmatter parsing error in {note_path}: {e} - continuing with empty processed list"
                 )
@@ -162,9 +154,7 @@ class StatelessStateManager:
         elif self.frontmatter_error_level == "CRITICAL":
             logger.critical(message)
 
-    def get_unprocessed_recordings(
-        self, note_path: str, all_recordings: List[str]
-    ) -> List[str]:
+    def get_unprocessed_recordings(self, note_path: str, all_recordings: List[str]) -> List[str]:
         """
         Get list of unprocessed recordings by comparing with frontmatter.
         Excludes broken recordings from processing.
@@ -180,18 +170,12 @@ class StatelessStateManager:
         broken = self.get_broken_recordings(note_path)
 
         # Exclude both processed and broken recordings
-        unprocessed = [
-            r for r in all_recordings if r not in processed and r not in broken
-        ]
+        unprocessed = [r for r in all_recordings if r not in processed and r not in broken]
 
         if unprocessed:
-            logger.info(
-                f"Found {len(unprocessed)} unprocessed recordings in {note_path}"
-            )
+            logger.info(f"Found {len(unprocessed)} unprocessed recordings in {note_path}")
         if broken:
-            logger.info(
-                f"Skipping {len(broken)} broken recordings in {note_path}: {broken}"
-            )
+            logger.info(f"Skipping {len(broken)} broken recordings in {note_path}: {broken}")
 
         return unprocessed
 
@@ -210,9 +194,7 @@ class StatelessStateManager:
             # Find the actual note file using robust path resolution
             note_full_path = self._find_note_file(note_path)
             if not note_full_path:
-                logger.error(
-                    f"Note file not found: {note_path} (searched in vault {self.vault_path})"
-                )
+                logger.error(f"Note file not found: {note_path} (searched in vault {self.vault_path})")
                 return False
 
             with open(note_full_path, "r", encoding="utf-8") as f:
@@ -227,9 +209,7 @@ class StatelessStateManager:
 
             if recording_filename not in frontmatter["processed_recordings"]:
                 frontmatter["processed_recordings"].append(recording_filename)
-                frontmatter[
-                    "processed_recordings"
-                ].sort()  # Keep sorted for consistency
+                frontmatter["processed_recordings"].sort()  # Keep sorted for consistency
 
             # Write back to file
             new_content = self._serialize_frontmatter(frontmatter, body)
@@ -237,9 +217,7 @@ class StatelessStateManager:
             with open(note_full_path, "w", encoding="utf-8") as f:
                 f.write(new_content)
 
-            logger.info(
-                f"Marked recording as processed: {recording_filename} in {note_path}"
-            )
+            logger.info(f"Marked recording as processed: {recording_filename} in {note_path}")
 
             # Reload the vault to pick up the changes
             if self.suppress_frontmatter_errors:
@@ -280,9 +258,7 @@ class StatelessStateManager:
 
             if end_idx == -1:
                 # No closing ---, treat as no frontmatter
-                logger.warning(
-                    "Frontmatter opening found but no closing '---', treating as regular content"
-                )
+                logger.warning("Frontmatter opening found but no closing '---', treating as regular content")
                 return {}, content
 
             # Extract and parse frontmatter
@@ -304,9 +280,7 @@ class StatelessStateManager:
                     )
                     frontmatter = {}
             except yaml.YAMLError as yaml_error:
-                self._log_frontmatter_error(
-                    f"Invalid YAML frontmatter, treating as empty: {yaml_error}"
-                )
+                self._log_frontmatter_error(f"Invalid YAML frontmatter, treating as empty: {yaml_error}")
                 frontmatter = {}
 
             return frontmatter, body
@@ -331,9 +305,7 @@ class StatelessStateManager:
 
         try:
             # Serialize frontmatter to YAML
-            yaml_content = yaml.dump(
-                frontmatter, default_flow_style=False, allow_unicode=True
-            )
+            yaml_content = yaml.dump(frontmatter, default_flow_style=False, allow_unicode=True)
 
             # Ensure body starts with newline if it exists
             if body and not body.startswith("\n"):
@@ -345,9 +317,7 @@ class StatelessStateManager:
             logger.error(f"Error serializing frontmatter: {e}")
             return body
 
-    def get_processing_stats(
-        self, notes_with_memos: Dict[str, List[str]]
-    ) -> Dict[str, int]:
+    def get_processing_stats(self, notes_with_memos: Dict[str, List[str]]) -> Dict[str, int]:
         """
         Get processing statistics for all notes.
 
@@ -475,9 +445,7 @@ class StatelessStateManager:
                 frontmatter = self.vault.get_front_matter(note_path)
 
             if not frontmatter:
-                logger.debug(
-                    f"No frontmatter found in {note_path}, returning empty broken list"
-                )
+                logger.debug(f"No frontmatter found in {note_path}, returning empty broken list")
                 return []
 
             broken = frontmatter.get("broken_recordings", [])
@@ -489,17 +457,11 @@ class StatelessStateManager:
                 )
                 return []
 
-            logger.debug(
-                f"Found {len(broken)} broken recordings in {note_path}: {broken}"
-            )
+            logger.debug(f"Found {len(broken)} broken recordings in {note_path}: {broken}")
             return broken
 
         except Exception as e:
-            if (
-                "ParserError" in str(e)
-                or "while parsing" in str(e)
-                or "yaml" in str(e).lower()
-            ):
+            if "ParserError" in str(e) or "while parsing" in str(e) or "yaml" in str(e).lower():
                 self._log_frontmatter_error(
                     f"Frontmatter parsing error in {note_path}: {e} - continuing with empty broken list"
                 )
@@ -532,9 +494,7 @@ class StatelessStateManager:
             # Find the actual note file using robust path resolution
             note_full_path = self._find_note_file(note_path)
             if not note_full_path:
-                logger.error(
-                    f"Note file not found: {note_path} (searched in vault {self.vault_path})"
-                )
+                logger.error(f"Note file not found: {note_path} (searched in vault {self.vault_path})")
                 return False
 
             with open(note_full_path, "r", encoding="utf-8") as f:

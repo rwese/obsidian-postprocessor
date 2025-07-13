@@ -22,12 +22,8 @@ class ObsidianProcessor:
     def __init__(self, config: Config):
         self.config = config
         suppress_errors = config.frontmatter_error_level == "SILENT"
-        self.detector = VoiceMemoDetector(
-            config.vault_path, config.voice_patterns, suppress_errors
-        )
-        self.state_manager = StatelessStateManager(
-            config.vault_path, config.frontmatter_error_level
-        )
+        self.detector = VoiceMemoDetector(config.vault_path, config.voice_patterns, suppress_errors)
+        self.state_manager = StatelessStateManager(config.vault_path, config.frontmatter_error_level)
         self.script_runner = ScriptRunner(config.processor_script_path)
         self._connected = False
 
@@ -78,9 +74,7 @@ class ObsidianProcessor:
             if notes_with_memos:
                 logger.info("Found notes:")
                 for note_path, voice_files in notes_with_memos.items():
-                    logger.info(
-                        f"  • {note_path} ({len(voice_files)} recording{'s' if len(voice_files) != 1 else ''})"
-                    )
+                    logger.info(f"  • {note_path} ({len(voice_files)} recording{'s' if len(voice_files) != 1 else ''})")
             else:
                 logger.info("Found notes: None with voice memos")
 
@@ -101,16 +95,12 @@ class ObsidianProcessor:
             # Step 4: Process unprocessed recordings
             if not dry_run:
                 logger.info("Processing unprocessed recordings...")
-                processing_results = self._process_unprocessed_recordings(
-                    verified_notes
-                )
+                processing_results = self._process_unprocessed_recordings(verified_notes)
                 results.update(processing_results)
             else:
                 logger.info("Dry run mode - skipping actual processing")
 
-            logger.info(
-                f"Vault processing completed. Newly processed: {results['newly_processed']}"
-            )
+            logger.info(f"Vault processing completed. Newly processed: {results['newly_processed']}")
             return results
 
         except Exception as e:
@@ -118,9 +108,7 @@ class ObsidianProcessor:
             results["errors"].append(str(e))
             return results
 
-    def _process_unprocessed_recordings(
-        self, notes_with_memos: Dict[str, List[str]]
-    ) -> Dict[str, int]:
+    def _process_unprocessed_recordings(self, notes_with_memos: Dict[str, List[str]]) -> Dict[str, int]:
         """
         Process all unprocessed recordings with robust error handling.
 
@@ -141,23 +129,17 @@ class ObsidianProcessor:
 
             try:
                 # Get unprocessed recordings for this note
-                unprocessed = self.state_manager.get_unprocessed_recordings(
-                    note_path, voice_files
-                )
+                unprocessed = self.state_manager.get_unprocessed_recordings(note_path, voice_files)
 
                 if not unprocessed:
                     logger.debug(f"No unprocessed recordings in {note_path}")
                     continue
 
-                logger.info(
-                    f"Processing {len(unprocessed)} recordings from {note_path}"
-                )
+                logger.info(f"Processing {len(unprocessed)} recordings from {note_path}")
 
                 # Process each unprocessed recording with timeout protection
                 for i, voice_file in enumerate(unprocessed):
-                    logger.info(
-                        f"Processing recording {i+1}/{len(unprocessed)}: {voice_file}"
-                    )
+                    logger.info(f"Processing recording {i+1}/{len(unprocessed)}: {voice_file}")
 
                     try:
                         # Process with timeout to prevent hanging
@@ -178,9 +160,7 @@ class ObsidianProcessor:
                 logger.error(f"Critical error processing note {note_path}: {e}")
                 # Count all unprocessed recordings in this note as failed
                 try:
-                    unprocessed = self.state_manager.get_unprocessed_recordings(
-                        note_path, voice_files
-                    )
+                    unprocessed = self.state_manager.get_unprocessed_recordings(note_path, voice_files)
                     results["failed_processing"] += len(unprocessed)
                 except Exception:
                     # If we can't even get the unprocessed count, assume all are failed
@@ -193,9 +173,7 @@ class ObsidianProcessor:
         )
         return results
 
-    def _process_single_recording(
-        self, note_path: str, voice_file: str, max_retries: int = 3
-    ) -> bool:
+    def _process_single_recording(self, note_path: str, voice_file: str, max_retries: int = 3) -> bool:
         """
         Process a single voice recording with retry logic.
 
@@ -211,16 +189,12 @@ class ObsidianProcessor:
             try:
                 # Get full paths
                 note_full_path = self.config.vault_path / f"{note_path}.md"
-                voice_full_path = self.detector.get_voice_file_path(
-                    note_path, voice_file
-                )
+                voice_full_path = self.detector.get_voice_file_path(note_path, voice_file)
 
                 if attempt == 0:
                     logger.info(f"Processing: {voice_file} from {note_path}")
                 else:
-                    logger.info(
-                        f"Retry {attempt}/{max_retries-1}: {voice_file} from {note_path}"
-                    )
+                    logger.info(f"Retry {attempt}/{max_retries-1}: {voice_file} from {note_path}")
 
                 # Execute the processing script
                 success = self.script_runner.run_script(
@@ -231,30 +205,22 @@ class ObsidianProcessor:
 
                 if success:
                     # Mark as processed in frontmatter
-                    if self.state_manager.mark_recording_processed(
-                        note_path, voice_file
-                    ):
+                    if self.state_manager.mark_recording_processed(note_path, voice_file):
                         logger.info(f"Successfully processed: {voice_file}")
                         return True
                     else:
-                        logger.error(
-                            f"Failed to mark recording as processed: {voice_file}"
-                        )
+                        logger.error(f"Failed to mark recording as processed: {voice_file}")
                         # This is a state management error, don't retry
                         return False
                 else:
-                    logger.warning(
-                        f"Script execution failed for: {voice_file} (attempt {attempt + 1}/{max_retries})"
-                    )
+                    logger.warning(f"Script execution failed for: {voice_file} (attempt {attempt + 1}/{max_retries})")
                     if attempt < max_retries - 1:
                         # Wait a bit before retry
                         time.sleep(1)
                     continue
 
             except Exception as e:
-                logger.error(
-                    f"Error processing recording {voice_file} (attempt {attempt + 1}/{max_retries}): {e}"
-                )
+                logger.error(f"Error processing recording {voice_file} (attempt {attempt + 1}/{max_retries}): {e}")
                 if attempt < max_retries - 1:
                     # Wait a bit before retry
                     time.sleep(1)
@@ -264,9 +230,7 @@ class ObsidianProcessor:
                     return False
 
         # After all retries failed, mark the recording as broken
-        logger.error(
-            f"Failed to process {voice_file} after {max_retries} attempts - marking as broken"
-        )
+        logger.error(f"Failed to process {voice_file} after {max_retries} attempts - marking as broken")
 
         # Mark as broken with error information
         broken_success = self.state_manager.mark_recording_broken(
@@ -276,9 +240,7 @@ class ObsidianProcessor:
         )
 
         if broken_success:
-            logger.warning(
-                f"Marked {voice_file} as broken to prevent future processing attempts"
-            )
+            logger.warning(f"Marked {voice_file} as broken to prevent future processing attempts")
         else:
             logger.error(f"Failed to mark {voice_file} as broken")
 
@@ -309,9 +271,7 @@ class ObsidianProcessor:
             if notes_with_memos:
                 logger.info("Found notes:")
                 for note_path, voice_files in notes_with_memos.items():
-                    logger.info(
-                        f"  • {note_path} ({len(voice_files)} recording{'s' if len(voice_files) != 1 else ''})"
-                    )
+                    logger.info(f"  • {note_path} ({len(voice_files)} recording{'s' if len(voice_files) != 1 else ''})")
             else:
                 logger.info("Found notes: None with voice memos")
 
@@ -335,9 +295,7 @@ class ObsidianProcessor:
             logger.error(f"Error getting vault status: {e}")
             return {"error": str(e)}
 
-    def process_specific_note(
-        self, note_path: str, dry_run: bool = False
-    ) -> Dict[str, any]:
+    def process_specific_note(self, note_path: str, dry_run: bool = False) -> Dict[str, any]:
         """
         Process a specific note for voice memos.
 
@@ -403,18 +361,14 @@ class ObsidianProcessor:
 
             # Get processing status
             processed = self.state_manager.get_processed_recordings(note_path)
-            unprocessed = self.state_manager.get_unprocessed_recordings(
-                note_path, verified_files
-            )
+            unprocessed = self.state_manager.get_unprocessed_recordings(note_path, verified_files)
 
             results["processed_recordings"] = processed
             results["unprocessed_recordings"] = unprocessed
 
             # Process unprocessed recordings
             if not dry_run and unprocessed:
-                logger.info(
-                    f"Processing {len(unprocessed)} recordings from {note_path}"
-                )
+                logger.info(f"Processing {len(unprocessed)} recordings from {note_path}")
 
                 for voice_file in unprocessed:
                     if self._process_single_recording(note_path, voice_file):

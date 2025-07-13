@@ -234,17 +234,119 @@ obsidian-postprocessor/
 ├── tests/                        # Test suite
 ├── main.py                       # Entry point
 ├── requirements.txt              # Dependencies
-└── Dockerfile                    # Container definition
+├── Dockerfile                    # Container definition
+├── .pre-commit-config.yaml       # Pre-commit hooks configuration
+└── .flake8                       # Linting configuration
 ```
 
-### Testing
+### Development Setup
+
+1. **Clone and setup environment:**
+   ```bash
+   git clone <repository-url>
+   cd obsidian-postprocessor
+   python -m venv venv
+   source venv/bin/activate  # Linux/Mac
+   # or venv\Scripts\activate  # Windows
+   pip install -r requirements.txt
+   ```
+
+2. **Install development tools:**
+   ```bash
+   pip install pre-commit pytest coverage
+   pre-commit install
+   ```
+
+3. **Run development commands:**
+   ```bash
+   # Run tests
+   ./venv/bin/python -m pytest tests/
+
+   # Run tests with coverage
+   ./venv/bin/python -m pytest tests/ --cov=src/
+
+   # Run linting
+   ./venv/bin/python -m flake8 src/ tests/ main.py
+
+   # Auto-format code
+   ./venv/bin/python -m black src/ tests/ main.py
+
+   # Sort imports
+   ./venv/bin/python -m isort src/ tests/ main.py
+
+   # Check CI pipeline status
+   ./check_pipeline.sh
+   ```
+
+### Pre-commit Hooks
+
+The project uses pre-commit hooks to ensure code quality:
+
+- **Black**: Automatic code formatting (120 char line length)
+- **isort**: Import sorting
+- **flake8**: Linting with project configuration
+- **Basic checks**: Trailing whitespace, YAML validation, large files
+- **pytest**: Fast test execution with fail-fast
 
 ```bash
-# Run tests
-python -m pytest tests/
+# Run pre-commit on all files
+pre-commit run --all-files
 
-# Run with coverage
-python -m pytest tests/ --cov=src/
+# Run specific hook
+pre-commit run black
+pre-commit run flake8
+```
+
+### Code Quality Standards
+
+- **Line length**: 120 characters (relaxed from default 79)
+- **Import sorting**: isort with black profile
+- **Type hints**: Encouraged for new code
+- **Testing**: Comprehensive test coverage required
+- **Documentation**: Docstrings for public methods
+
+### Testing Strategy
+
+```bash
+# Run all tests
+./venv/bin/python -m pytest tests/
+
+# Run with coverage report
+./venv/bin/python -m pytest tests/ --cov=src/ --cov-report=html
+
+# Run specific test file
+./venv/bin/python -m pytest tests/test_voice_memo_detector.py
+
+# Run with verbose output
+./venv/bin/python -m pytest tests/ -v
+
+# Run single test function
+./venv/bin/python -m pytest tests/test_config.py::TestConfig::test_default_config
+```
+
+### Continuous Integration
+
+The project uses GitHub Actions for CI/CD:
+
+- **Multi-platform testing**: Ubuntu, Windows, macOS
+- **Python version matrix**: 3.9, 3.10, 3.11, 3.12, 3.13
+- **Code quality**: Linting, formatting, security scanning
+- **Docker publishing**: Automatic container builds and registry publishing
+- **Integration testing**: End-to-end workflow validation
+
+Check pipeline status: `./check_pipeline.sh`
+
+### Docker Development
+
+```bash
+# Build development image
+docker build -t obsidian-postprocessor:dev .
+
+# Run with local vault
+docker run -v "$PWD/testvault/test-vault:/vault" obsidian-postprocessor:dev --dry-run
+
+# Pull published image from registry
+docker pull ghcr.io/rwese/obsidian-postprocessor:latest
 ```
 
 ## Requirements

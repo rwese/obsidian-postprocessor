@@ -94,14 +94,9 @@ This note has good frontmatter.
             assert processed == []
 
             # Should have debug log messages
-            debug_messages = [
-                record for record in caplog.records if record.levelname == "DEBUG"
-            ]
+            debug_messages = [record for record in caplog.records if record.levelname == "DEBUG"]
             assert len(debug_messages) > 0
-            assert any(
-                "Frontmatter parsing error" in record.message
-                for record in debug_messages
-            )
+            assert any("Frontmatter parsing error" in record.message for record in debug_messages)
 
     def test_warning_frontmatter_errors(self, caplog):
         """Test that WARNING level shows frontmatter errors as warnings."""
@@ -122,14 +117,9 @@ This note has good frontmatter.
             assert processed == []
 
             # Should have warning log messages
-            warning_messages = [
-                record for record in caplog.records if record.levelname == "WARNING"
-            ]
+            warning_messages = [record for record in caplog.records if record.levelname == "WARNING"]
             assert len(warning_messages) > 0
-            assert any(
-                "Frontmatter parsing error" in record.message
-                for record in warning_messages
-            )
+            assert any("Frontmatter parsing error" in record.message for record in warning_messages)
 
     def test_good_frontmatter_still_works(self):
         """Test that good frontmatter still works correctly."""
