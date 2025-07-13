@@ -488,3 +488,81 @@ This is a test note with voice recordings.
             assert "Recording005.mp3" not in unprocessed
             assert "Recording006.wav" in unprocessed
             assert len(unprocessed) == 1
+
+    def test_reprocessing_after_frontmatter_removal(self):
+        """
+        Test that removing 'processed' info from frontmatter allows reprocessing.
+        
+        This is a regression test for the bug where recordings don't get reprocessed
+        after the 'processed_recordings' field is manually removed from frontmatter.
+        """
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault_path = self.create_test_vault(temp_dir)
+
+            manager = StatelessStateManager(vault_path)
+            manager.connect()
+
+            # Step 1: Mark a recording as processed
+            success = manager.mark_recording_processed(
+                "No Frontmatter", "Recording004.webm"
+            )
+            assert success
+
+            # Verify it was marked as processed
+            processed = manager.get_processed_recordings("No Frontmatter")
+            assert "Recording004.webm" in processed
+            assert len(processed) == 1
+
+            # Step 2: Verify it shows as processed (not unprocessed)
+            all_recordings = ["Recording004.webm"]
+            unprocessed = manager.get_unprocessed_recordings(
+                "No Frontmatter", all_recordings
+            )
+            assert len(unprocessed) == 0  # Should be empty since it's processed
+
+            # Step 3: Manually remove the processed_recordings from frontmatter
+            # This simulates user manually editing the note
+            note_path = vault_path / "No Frontmatter.md"
+            with open(note_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            
+            # Parse and modify frontmatter to remove processed_recordings
+            frontmatter, body = manager._parse_frontmatter(content)
+            if "processed_recordings" in frontmatter:
+                del frontmatter["processed_recordings"]
+            
+            # Write back the modified content
+            new_content = manager._serialize_frontmatter(frontmatter, body)
+            with open(note_path, "w", encoding="utf-8") as f:
+                f.write(new_content)
+
+            # Step 4: Reconnect to pick up changes (simulate fresh run)
+            manager = StatelessStateManager(vault_path)
+            manager.connect()
+
+            # Step 5: Verify that processed_recordings is now empty
+            processed = manager.get_processed_recordings("No Frontmatter")
+            assert len(processed) == 0
+            assert "Recording004.webm" not in processed
+
+            # Step 6: Verify that the recording now shows as unprocessed
+            # This is the main test - it should be available for reprocessing
+            unprocessed = manager.get_unprocessed_recordings(
+                "No Frontmatter", all_recordings
+            )
+            assert len(unprocessed) == 1
+            assert "Recording004.webm" in unprocessed
+
+            # Step 7: Mark it as processed again to verify the workflow works
+            success = manager.mark_recording_processed(
+                "No Frontmatter", "Recording004.webm"
+            )
+            assert success
+
+            # Final verification
+            processed = manager.get_processed_recordings("No Frontmatter")
+            assert "Recording004.webm" in processed
+            unprocessed = manager.get_unprocessed_recordings(
+                "No Frontmatter", all_recordings
+            )
+            assert len(unprocessed) == 0

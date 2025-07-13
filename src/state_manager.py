@@ -69,6 +69,8 @@ class StatelessStateManager:
         if not self.vault:
             raise RuntimeError("Vault not connected. Call connect() first.")
 
+        logger.debug(f"Getting processed recordings for note: {note_path}")
+
         try:
             if self.suppress_frontmatter_errors:
                 with suppress_frontmatter_errors():
@@ -80,29 +82,32 @@ class StatelessStateManager:
                 # Check if the note actually has frontmatter that failed to parse
                 if self._has_malformed_frontmatter(note_path):
                     self._log_frontmatter_error(
-                        f"Frontmatter parsing error in {note_path}: malformed YAML"
+                        f"Frontmatter parsing error in {note_path}: malformed YAML - continuing with empty processed list"
                     )
+                logger.debug(f"No frontmatter found in {note_path}, returning empty processed list")
                 return []
 
             processed = frontmatter.get("processed_recordings", [])
             if not isinstance(processed, list):
-                logger.warning(
-                    f"Invalid processed_recordings format in {note_path}, expected list"
+                self._log_frontmatter_error(
+                    f"Invalid processed_recordings format in {note_path}, expected list, got {type(processed)} - continuing with empty processed list"
                 )
                 return []
 
+            logger.debug(f"Found {len(processed)} processed recordings in {note_path}: {processed}")
             return processed
 
         except Exception as e:
             # Check if it's a YAML parsing error from obsidiantools
-            if "ParserError" in str(e) or "while parsing" in str(e):
+            if "ParserError" in str(e) or "while parsing" in str(e) or "yaml" in str(e).lower():
                 self._log_frontmatter_error(
-                    f"Frontmatter parsing error in {note_path}: {e}"
+                    f"Frontmatter parsing error in {note_path}: {e} - continuing with empty processed list"
                 )
                 return []
             else:
-                logger.error(
-                    f"Error getting processed recordings from {note_path}: {e}"
+                # For non-frontmatter errors, log as warning but continue processing
+                logger.warning(
+                    f"Error getting processed recordings from {note_path}: {e} - continuing with empty processed list"
                 )
                 return []
 
@@ -238,7 +243,7 @@ class StatelessStateManager:
             logger.error(f"Error marking recording as processed: {e}")
             return False
 
-    def _parse_frontmatter(self, content: str) -> tuple[Dict[str, Any], str]:
+    def _parse_frontmatter(self, content: str) -> tuple:
         """
         Parse frontmatter from note content.
 
@@ -442,6 +447,8 @@ class StatelessStateManager:
         if not self.vault:
             raise RuntimeError("Vault not connected. Call connect() first.")
 
+        logger.debug(f"Getting broken recordings for note: {note_path}")
+
         try:
             if self.suppress_frontmatter_errors:
                 with suppress_frontmatter_errors():
@@ -450,25 +457,28 @@ class StatelessStateManager:
                 frontmatter = self.vault.get_front_matter(note_path)
 
             if not frontmatter:
+                logger.debug(f"No frontmatter found in {note_path}, returning empty broken list")
                 return []
 
             broken = frontmatter.get("broken_recordings", [])
             if not isinstance(broken, list):
-                logger.warning(
-                    f"Invalid broken_recordings format in {note_path}, expected list"
+                self._log_frontmatter_error(
+                    f"Invalid broken_recordings format in {note_path}, expected list, got {type(broken)} - continuing with empty broken list"
                 )
                 return []
 
+            logger.debug(f"Found {len(broken)} broken recordings in {note_path}: {broken}")
             return broken
 
         except Exception as e:
-            if "ParserError" in str(e) or "while parsing" in str(e):
+            if "ParserError" in str(e) or "while parsing" in str(e) or "yaml" in str(e).lower():
                 self._log_frontmatter_error(
-                    f"Frontmatter parsing error in {note_path}: {e}"
+                    f"Frontmatter parsing error in {note_path}: {e} - continuing with empty broken list"
                 )
                 return []
             else:
-                logger.error(f"Error getting broken recordings from {note_path}: {e}")
+                # For non-frontmatter errors, log as warning but continue processing
+                logger.warning(f"Error getting broken recordings from {note_path}: {e} - continuing with empty broken list")
                 return []
 
     def mark_recording_broken(

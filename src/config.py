@@ -20,6 +20,7 @@ class Config:
         self.log_level = self._get_log_level()
         self.watch_mode = self._get_watch_mode()
         self.frontmatter_error_level = self._get_frontmatter_error_level()
+        self.debug_voice_detection = self._get_debug_voice_detection()
 
     def _get_vault_path(self) -> Path:
         """Get vault path from environment or default."""
@@ -72,6 +73,10 @@ class Config:
             )
         return level
 
+    def _get_debug_voice_detection(self) -> bool:
+        """Get debug voice detection flag from environment or default."""
+        return os.getenv("DEBUG_VOICE_DETECTION", "false").lower() in ("true", "1", "yes", "on")
+
     def validate(self) -> None:
         """Validate configuration."""
         if not self.vault_path.exists():
@@ -99,4 +104,5 @@ class Config:
   State Method: {self.state_method}
   Log Level: {self.log_level}
   Watch Mode: {self.watch_mode}
-  Frontmatter Error Level: {self.frontmatter_error_level}"""
+  Frontmatter Error Level: {self.frontmatter_error_level}
+  Debug Voice Detection: {self.debug_voice_detection}"""
