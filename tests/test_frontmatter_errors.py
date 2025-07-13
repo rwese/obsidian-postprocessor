@@ -56,9 +56,7 @@ This note has good frontmatter.
     def test_silent_frontmatter_errors(self, caplog):
         """Test that SILENT level suppresses frontmatter errors."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            vault_path = self.create_test_vault_with_malformed_frontmatter(
-                temp_dir
-            )
+            vault_path = self.create_test_vault_with_malformed_frontmatter(temp_dir)
 
             # Set up state manager with SILENT error level
             manager = StatelessStateManager(vault_path, "SILENT")
@@ -79,9 +77,7 @@ This note has good frontmatter.
     def test_debug_frontmatter_errors(self, caplog):
         """Test that DEBUG level shows frontmatter errors as debug."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            vault_path = self.create_test_vault_with_malformed_frontmatter(
-                temp_dir
-            )
+            vault_path = self.create_test_vault_with_malformed_frontmatter(temp_dir)
 
             # Set up state manager with DEBUG error level
             manager = StatelessStateManager(vault_path, "DEBUG")
@@ -99,9 +95,7 @@ This note has good frontmatter.
 
             # Should have debug log messages
             debug_messages = [
-                record
-                for record in caplog.records
-                if record.levelname == "DEBUG"
+                record for record in caplog.records if record.levelname == "DEBUG"
             ]
             assert len(debug_messages) > 0
             assert any(
@@ -112,9 +106,7 @@ This note has good frontmatter.
     def test_warning_frontmatter_errors(self, caplog):
         """Test that WARNING level shows frontmatter errors as warnings."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            vault_path = self.create_test_vault_with_malformed_frontmatter(
-                temp_dir
-            )
+            vault_path = self.create_test_vault_with_malformed_frontmatter(temp_dir)
 
             # Set up state manager with WARNING error level (default)
             manager = StatelessStateManager(vault_path, "WARNING")
@@ -131,9 +123,7 @@ This note has good frontmatter.
 
             # Should have warning log messages
             warning_messages = [
-                record
-                for record in caplog.records
-                if record.levelname == "WARNING"
+                record for record in caplog.records if record.levelname == "WARNING"
             ]
             assert len(warning_messages) > 0
             assert any(
@@ -144,9 +134,7 @@ This note has good frontmatter.
     def test_good_frontmatter_still_works(self):
         """Test that good frontmatter still works correctly."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            vault_path = self.create_test_vault_with_malformed_frontmatter(
-                temp_dir
-            )
+            vault_path = self.create_test_vault_with_malformed_frontmatter(temp_dir)
 
             # Set up state manager
             manager = StatelessStateManager(vault_path, "WARNING")
@@ -162,9 +150,7 @@ This note has good frontmatter.
     def test_parse_frontmatter_robustness(self):
         """Test that frontmatter parsing is robust."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            vault_path = self.create_test_vault_with_malformed_frontmatter(
-                temp_dir
-            )
+            vault_path = self.create_test_vault_with_malformed_frontmatter(temp_dir)
 
             manager = StatelessStateManager(vault_path, "SILENT")
 

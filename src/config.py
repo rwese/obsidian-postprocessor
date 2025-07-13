@@ -101,9 +101,7 @@ class Config:
             raise ValueError(f"Vault path does not exist: {self.vault_path}")
 
         if not self.vault_path.is_dir():
-            raise ValueError(
-                f"Vault path is not a directory: {self.vault_path}"
-            )
+            raise ValueError(f"Vault path is not a directory: {self.vault_path}")
 
         if not self.processor_script_path.exists():
             raise ValueError(

@@ -93,23 +93,17 @@ And an image:
             detector.connect()
 
             # Test note with multiple voice files
-            voice_files = detector._extract_voice_files_from_note(
-                "Voice Memo 1"
-            )
+            voice_files = detector._extract_voice_files_from_note("Voice Memo 1")
             assert len(voice_files) == 2
             assert "Recording001.webm" in voice_files
             assert "Recording002.mp3" in voice_files
 
             # Test note with no voice files
-            voice_files = detector._extract_voice_files_from_note(
-                "Voice Memo 2"
-            )
+            voice_files = detector._extract_voice_files_from_note("Voice Memo 2")
             assert len(voice_files) == 0
 
             # Test note with one voice file
-            voice_files = detector._extract_voice_files_from_note(
-                "Mixed Content"
-            )
+            voice_files = detector._extract_voice_files_from_note("Mixed Content")
             assert len(voice_files) == 1
             assert "Audio_Note.wav" in voice_files
 
@@ -170,9 +164,7 @@ And an image:
             notes_with_memos = detector.get_notes_with_voice_memos()
 
             # Verify files exist
-            verified_notes = detector.verify_voice_files_exist(
-                notes_with_memos
-            )
+            verified_notes = detector.verify_voice_files_exist(notes_with_memos)
 
             # All files should exist
             assert len(verified_notes) == 2
@@ -181,9 +173,7 @@ And an image:
 
             # Remove one file and test again
             (vault_path / "Recording001.webm").unlink()
-            verified_notes = detector.verify_voice_files_exist(
-                notes_with_memos
-            )
+            verified_notes = detector.verify_voice_files_exist(notes_with_memos)
 
             # Should still have Mixed Content, but Voice Memo 1 should have fewer files
             assert len(verified_notes) == 2

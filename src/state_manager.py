@@ -36,9 +36,7 @@ def suppress_frontmatter_errors():
 class StatelessStateManager:
     """Manages processing state through frontmatter in Obsidian notes."""
 
-    def __init__(
-        self, vault_path: Path, frontmatter_error_level: str = "WARNING"
-    ):
+    def __init__(self, vault_path: Path, frontmatter_error_level: str = "WARNING"):
         self.vault_path = vault_path
         self.vault = None
         self.frontmatter_error_level = frontmatter_error_level
@@ -49,14 +47,10 @@ class StatelessStateManager:
         try:
             if self.suppress_frontmatter_errors:
                 with suppress_frontmatter_errors():
-                    self.vault = (
-                        otools.Vault(self.vault_path).connect().gather()
-                    )
+                    self.vault = otools.Vault(self.vault_path).connect().gather()
             else:
                 self.vault = otools.Vault(self.vault_path).connect().gather()
-            logger.info(
-                f"Connected to vault for state management: {self.vault_path}"
-            )
+            logger.info(f"Connected to vault for state management: {self.vault_path}")
             return self
         except Exception as e:
             logger.error(f"Failed to connect to vault {self.vault_path}: {e}")
@@ -201,9 +195,7 @@ class StatelessStateManager:
 
         return unprocessed
 
-    def mark_recording_processed(
-        self, note_path: str, recording_filename: str
-    ) -> bool:
+    def mark_recording_processed(self, note_path: str, recording_filename: str) -> bool:
         """
         Mark a recording as processed by updating frontmatter.
 
@@ -252,9 +244,7 @@ class StatelessStateManager:
             # Reload the vault to pick up the changes
             if self.suppress_frontmatter_errors:
                 with suppress_frontmatter_errors():
-                    self.vault = (
-                        otools.Vault(self.vault_path).connect().gather()
-                    )
+                    self.vault = otools.Vault(self.vault_path).connect().gather()
             else:
                 self.vault = otools.Vault(self.vault_path).connect().gather()
 
@@ -297,7 +287,7 @@ class StatelessStateManager:
 
             # Extract and parse frontmatter
             frontmatter_text = "\n".join(lines[1:end_idx])
-            body = "\n".join(lines[end_idx + 1:])
+            body = "\n".join(lines[end_idx + 1 :])
 
             if not frontmatter_text.strip():
                 # Empty frontmatter
@@ -325,9 +315,7 @@ class StatelessStateManager:
             logger.error(f"Unexpected error parsing frontmatter: {e}")
             return {}, content
 
-    def _serialize_frontmatter(
-        self, frontmatter: Dict[str, Any], body: str
-    ) -> str:
+    def _serialize_frontmatter(self, frontmatter: Dict[str, Any], body: str) -> str:
         """
         Serialize frontmatter and body back to note content.
 
@@ -383,9 +371,7 @@ class StatelessStateManager:
             broken = self.get_broken_recordings(note_path)
             stats["processed_recordings"] += len(processed)
             stats["broken_recordings"] += len(broken)
-            unprocessed = self.get_unprocessed_recordings(
-                note_path, recordings
-            )
+            unprocessed = self.get_unprocessed_recordings(note_path, recordings)
             stats["unprocessed_recordings"] += len(unprocessed)
 
         return stats
@@ -458,9 +444,7 @@ class StatelessStateManager:
             # Also try recursive search with rglob
             for path in self.vault_path.rglob(f"{note_name}.md"):
                 if path.is_file():
-                    logger.debug(
-                        f"Found note file by recursive search: {path}"
-                    )
+                    logger.debug(f"Found note file by recursive search: {path}")
                     return path
 
         except Exception as e:
@@ -565,9 +549,7 @@ class StatelessStateManager:
 
             if recording_filename not in frontmatter["broken_recordings"]:
                 frontmatter["broken_recordings"].append(recording_filename)
-                frontmatter[
-                    "broken_recordings"
-                ].sort()  # Keep sorted for consistency
+                frontmatter["broken_recordings"].sort()  # Keep sorted for consistency
 
             # Add error timestamp and message if provided
             if error_message:
@@ -596,9 +578,7 @@ class StatelessStateManager:
             # Reload the vault to pick up the changes
             if self.suppress_frontmatter_errors:
                 with suppress_frontmatter_errors():
-                    self.vault = (
-                        otools.Vault(self.vault_path).connect().gather()
-                    )
+                    self.vault = otools.Vault(self.vault_path).connect().gather()
             else:
                 self.vault = otools.Vault(self.vault_path).connect().gather()
 

@@ -136,13 +136,10 @@ This is another regular note with a voice memo.
             template_notes = [
                 path
                 for path in note_paths
-                if path.startswith("templates/")
-                or path.startswith("Templates/")
+                if path.startswith("templates/") or path.startswith("Templates/")
             ]
 
-            assert (
-                len(template_notes) == 0
-            ), f"Found template notes: {template_notes}"
+            assert len(template_notes) == 0, f"Found template notes: {template_notes}"
 
     def test_should_ignore_note_method(self):
         """Test the _should_ignore_note method directly."""
@@ -176,9 +173,7 @@ This is another regular note with a voice memo.
             detector.connect()
 
             # Test cases - now using just note names as that's what obsidiantools provides
-            assert (
-                detector._should_ignore_note("My Template") is True
-            )  # In templates/
+            assert detector._should_ignore_note("My Template") is True  # In templates/
             assert (
                 detector._should_ignore_note("Nested Template") is True
             )  # In subfolder/Templates/

@@ -54,9 +54,7 @@ class ObsidianProcessor:
             Dictionary with processing results
         """
         if not self._connected:
-            raise RuntimeError(
-                "Processor not connected. Call connect() first."
-            )
+            raise RuntimeError("Processor not connected. Call connect() first.")
 
         logger.info(f"Starting vault processing (dry_run={dry_run})")
 
@@ -88,22 +86,16 @@ class ObsidianProcessor:
 
             # Step 2: Verify voice files exist
             logger.info("Verifying voice files exist...")
-            verified_notes = self.detector.verify_voice_files_exist(
-                notes_with_memos
-            )
+            verified_notes = self.detector.verify_voice_files_exist(notes_with_memos)
 
             # Step 3: Get processing statistics
             stats = self.state_manager.get_processing_stats(verified_notes)
             results.update(stats)
             results["notes_with_memos"] = len(verified_notes)
 
-            logger.info(
-                f"Found {results['notes_with_memos']} notes with voice memos"
-            )
+            logger.info(f"Found {results['notes_with_memos']} notes with voice memos")
             logger.info(f"Total recordings: {results['total_recordings']}")
-            logger.info(
-                f"Already processed: {results['processed_recordings']}"
-            )
+            logger.info(f"Already processed: {results['processed_recordings']}")
             logger.info(f"Unprocessed: {results['unprocessed_recordings']}")
 
             # Step 4: Process unprocessed recordings
@@ -145,9 +137,7 @@ class ObsidianProcessor:
 
         for note_path, voice_files in notes_with_memos.items():
             processed_notes += 1
-            logger.info(
-                f"Processing note {processed_notes}/{total_notes}: {note_path}"
-            )
+            logger.info(f"Processing note {processed_notes}/{total_notes}: {note_path}")
 
             try:
                 # Get unprocessed recordings for this note
@@ -171,35 +161,25 @@ class ObsidianProcessor:
 
                     try:
                         # Process with timeout to prevent hanging
-                        if self._process_single_recording(
-                            note_path, voice_file
-                        ):
+                        if self._process_single_recording(note_path, voice_file):
                             results["newly_processed"] += 1
-                            logger.info(
-                                f"✓ Successfully processed: {voice_file}"
-                            )
+                            logger.info(f"✓ Successfully processed: {voice_file}")
                         else:
                             results["failed_processing"] += 1
                             logger.error(f"✗ Failed to process: {voice_file}")
 
                     except Exception as e:
-                        logger.error(
-                            f"✗ Exception processing {voice_file}: {e}"
-                        )
+                        logger.error(f"✗ Exception processing {voice_file}: {e}")
                         results["failed_processing"] += 1
                         # Continue with next recording, don't let one failure stop everything
                         continue
 
             except Exception as e:
-                logger.error(
-                    f"Critical error processing note {note_path}: {e}"
-                )
+                logger.error(f"Critical error processing note {note_path}: {e}")
                 # Count all unprocessed recordings in this note as failed
                 try:
-                    unprocessed = (
-                        self.state_manager.get_unprocessed_recordings(
-                            note_path, voice_files
-                        )
+                    unprocessed = self.state_manager.get_unprocessed_recordings(
+                        note_path, voice_files
                     )
                     results["failed_processing"] += len(unprocessed)
                 except Exception:
@@ -319,9 +299,7 @@ class ObsidianProcessor:
             Dictionary with vault status information
         """
         if not self._connected:
-            raise RuntimeError(
-                "Processor not connected. Call connect() first."
-            )
+            raise RuntimeError("Processor not connected. Call connect() first.")
 
         try:
             # Get all voice memos
@@ -337,9 +315,7 @@ class ObsidianProcessor:
             else:
                 logger.info("Found notes: None with voice memos")
 
-            verified_notes = self.detector.verify_voice_files_exist(
-                notes_with_memos
-            )
+            verified_notes = self.detector.verify_voice_files_exist(notes_with_memos)
 
             # Get processing statistics
             stats = self.state_manager.get_processing_stats(verified_notes)
@@ -373,13 +349,9 @@ class ObsidianProcessor:
             Dictionary with processing results
         """
         if not self._connected:
-            raise RuntimeError(
-                "Processor not connected. Call connect() first."
-            )
+            raise RuntimeError("Processor not connected. Call connect() first.")
 
-        logger.info(
-            f"Processing specific note: {note_path} (dry_run={dry_run})"
-        )
+        logger.info(f"Processing specific note: {note_path} (dry_run={dry_run})")
 
         results = {
             "note_path": note_path,
@@ -409,9 +381,7 @@ class ObsidianProcessor:
                 note_path = note_path.replace(".md", "")
 
             # Extract voice recordings from this note
-            voice_files = self.detector._extract_voice_files_from_note(
-                note_path
-            )
+            voice_files = self.detector._extract_voice_files_from_note(note_path)
             results["voice_recordings"] = voice_files
 
             if not voice_files:
@@ -421,9 +391,7 @@ class ObsidianProcessor:
             # Verify voice files exist
             verified_files = []
             for voice_file in voice_files:
-                voice_path = self.detector.get_voice_file_path(
-                    note_path, voice_file
-                )
+                voice_path = self.detector.get_voice_file_path(note_path, voice_file)
                 if voice_path.exists():
                     verified_files.append(voice_file)
                 else:

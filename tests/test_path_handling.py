@@ -106,9 +106,7 @@ This note has a voice file in the same subfolder.
             voice_path = detector.get_voice_file_path(
                 "Attachments Note", "attachments_recording.webm"
             )
-            expected_path = (
-                vault_path / "attachments" / "attachments_recording.webm"
-            )
+            expected_path = vault_path / "attachments" / "attachments_recording.webm"
 
             assert voice_path == expected_path
             assert voice_path.exists()
@@ -160,9 +158,7 @@ This note has a voice file in the same subfolder.
             assert len(notes_with_memos) == 3
 
             # Verify all voice files are found
-            verified_notes = detector.verify_voice_files_exist(
-                notes_with_memos
-            )
+            verified_notes = detector.verify_voice_files_exist(notes_with_memos)
 
             # All notes should have verified voice files
             assert len(verified_notes) == 3
@@ -176,8 +172,5 @@ This note has a voice file in the same subfolder.
 
             # Check that each note has its expected voice file
             assert "root_recording.webm" in verified_notes["Root Note"]
-            assert (
-                "attachments_recording.webm"
-                in verified_notes["Attachments Note"]
-            )
+            assert "attachments_recording.webm" in verified_notes["Attachments Note"]
             assert "subdir_recording.webm" in verified_notes["Subfolder Note"]

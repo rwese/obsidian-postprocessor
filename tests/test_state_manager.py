@@ -301,9 +301,7 @@ This is the body content.
 
             # Create notes in different locations
             (vault_path / "Root Note.md").write_text("Root note content")
-            (notes_dir / "Subdirectory Note.md").write_text(
-                "Subdirectory note content"
-            )
+            (notes_dir / "Subdirectory Note.md").write_text("Subdirectory note content")
             (daily_dir / "Voice note test.md").write_text("Daily note content")
 
             manager = StatelessStateManager(vault_path)
@@ -463,9 +461,7 @@ This is a test note with voice recordings.
             assert stats["total_notes"] == 2
             assert stats["total_recordings"] == 4
             assert stats["processed_recordings"] == 2  # From 'Processed Note'
-            assert (
-                stats["broken_recordings"] == 1
-            )  # Recording003.wav marked as broken
+            assert stats["broken_recordings"] == 1  # Recording003.wav marked as broken
             assert (
                 stats["unprocessed_recordings"] == 1
             )  # Only Recording004.webm from 'No Frontmatter'
@@ -522,9 +518,7 @@ This is a test note with voice recordings.
             unprocessed = manager.get_unprocessed_recordings(
                 "No Frontmatter", all_recordings
             )
-            assert (
-                len(unprocessed) == 0
-            )  # Should be empty since it's processed
+            assert len(unprocessed) == 0  # Should be empty since it's processed
 
             # Step 3: Manually remove the processed_recordings from frontmatter
             # This simulates user manually editing the note

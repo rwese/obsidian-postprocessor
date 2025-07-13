@@ -112,3 +112,30 @@ scripts:
 - Large vaults benefit from targeted directory processing
 - Script timeouts prevent hanging on problematic files
 - Dry-run mode useful for analyzing processing scope
+
+## Code Quality & Linting
+
+### Flake8 Configuration
+The project uses relaxed linting rules defined in `.flake8`:
+- Line length limit: 120 characters (more permissive than default 79)
+- Configuration file automatically used by CI/CD pipeline
+
+### Common Linting Pitfalls
+**Multi-line String Formatting Syntax Error**
+```python
+# WRONG - Causes E999 SyntaxError:
+f"Long string with {variable}"\n            f"continuation"
+
+# CORRECT - Proper multi-line f-string:
+f"Long string with {variable}"
+f"continuation"
+
+# ALTERNATIVE - Parentheses for implicit line joining:
+(f"Long string with {variable} "
+ f"continuation")
+```
+
+### Pipeline Commands
+- `./venv/bin/python -m flake8 src/ tests/ main.py` - Lint with project config
+- CI automatically uses `.flake8` configuration file
+- Black and isort used for code formatting in pipeline
