@@ -8,10 +8,19 @@ A stateless tool for processing voice memos in Obsidian vaults.
 import argparse
 import logging
 import sys
+import warnings
 from pathlib import Path
 
 from src.config import Config
 from src.processor import ObsidianProcessor
+
+# Suppress pandas FutureWarning from obsidiantools about DataFrame concatenation
+warnings.filterwarnings(
+    "ignore",
+    message="The behavior of DataFrame concatenation with empty or all-NA entries is deprecated.*",
+    category=FutureWarning,
+    module="obsidiantools.*",
+)
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
