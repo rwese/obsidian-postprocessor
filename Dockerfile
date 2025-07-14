@@ -27,11 +27,12 @@ RUN mkdir -p /vault
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Create non-root user for security
+# Create non-root user for security (optional)
 RUN useradd --create-home --shell /bin/bash appuser && \
     chown -R appuser:appuser /app && \
     chown -R appuser:appuser /vault
-USER appuser
+# Run as root by default for compatibility with various filesystems
+# Users can override with --user appuser if they prefer non-root execution
 
 # Set environment variables
 ENV PYTHONPATH=/app
