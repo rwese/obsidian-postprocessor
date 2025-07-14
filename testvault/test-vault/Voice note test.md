@@ -24,4 +24,3 @@ The processor should be able to find this note even when running in different en
 
 > **Transcript:**
 > Das ist ein Test eines Dictats, Punkt 1 funktioniert, Punkt 2 funktioniert nicht.
-

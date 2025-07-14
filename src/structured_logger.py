@@ -338,4 +338,3 @@ class DetailedOutputWriter:
         for log_file in self.output_dir.glob("*.json"):
             if log_file.stat().st_mtime < cutoff_time:
                 log_file.unlink()
-

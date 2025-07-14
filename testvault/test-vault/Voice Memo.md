@@ -16,4 +16,3 @@ Here is a voice memo:
 
 > **Transcript:**
 > Das ist ein Test eines Dictats, Punkt 1 funktioniert, Punkt 2 funktioniert nicht.
-
