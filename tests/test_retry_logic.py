@@ -1,43 +1,41 @@
 """
-Tests for retry logic and error handling.
+Tests for the retry logic in the ObsidianProcessor.
+
+These tests verify that the processor handles failures gracefully by
+testing only once per run (no instant retries) and provides proper
+error handling for broken recordings.
 """
 
 import logging
 import os
-import sys
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-# Add src to path first
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-# flake8: noqa: E402
 from src.config import Config
 from src.processor import ObsidianProcessor
 
 
 class TestRetryLogic:
-    """Test retry logic and error handling."""
+    """Test class for processor retry logic."""
 
     def create_test_vault_with_unprocessed(self, temp_dir):
         """Create a test vault with unprocessed recordings."""
-        vault_path = Path(temp_dir) / "vault"
+        vault_path = Path(temp_dir) / "test_vault"
         vault_path.mkdir()
 
-        # Create a test processor script
+        # Create processor script
         processor_path = vault_path / "processor.py"
         processor_path.write_text(
             """#!/usr/bin/env python3
 import sys
-print(f"Processing {sys.argv[1]} with {sys.argv[2]}")
-exit(0)
+sys.exit(0)  # Success
 """
         )
-        processor_path.chmod(0o755)
 
-        # Note with unprocessed recording
-        note1 = vault_path / "Test Note.md"
-        note1.write_text(
+        # Create test note with unprocessed recording
+        note = vault_path / "Test Note.md"
+        note.write_text(
             """---
 title: Test Note
 ---
@@ -54,8 +52,8 @@ This note has an unprocessed recording.
 
         return vault_path, processor_path
 
-    def test_retry_on_script_failure(self, caplog):
-        """Test retry logic when script execution fails."""
+    def test_single_attempt_success(self, caplog):
+        """Test single attempt processing when script execution succeeds."""
         with tempfile.TemporaryDirectory() as temp_dir:
             vault_path, processor_path = self.create_test_vault_with_unprocessed(temp_dir)
 
@@ -73,13 +71,9 @@ This note has an unprocessed recording.
                 # Create processor
                 processor = ObsidianProcessor(config)
 
-                # Mock the script runner to fail first 2 attempts, succeed on 3rd
+                # Mock the script runner to succeed on first attempt
                 with patch.object(processor.script_runner, "run_script") as mock_run:
-                    mock_run.side_effect = [
-                        False,
-                        False,
-                        True,
-                    ]  # Fail, Fail, Success
+                    mock_run.return_value = True
 
                     # Connect processor
                     processor.connect()
@@ -91,21 +85,22 @@ This note has an unprocessed recording.
                     # Test single recording processing
                     result = processor._process_single_recording("Test Note", "Recording001.webm")
 
-                    # Should succeed after retries
+                    # Should succeed on first attempt
                     assert result is True
 
-                    # Should have called run_script 3 times
-                    assert mock_run.call_count == 3
+                    # Should have called run_script only once (no retries)
+                    assert mock_run.call_count == 1
 
-                    # Check log messages for retry attempts
+                    # Check log messages for processing (no retry attempts)
                     log_messages = [record.message for record in caplog.records]
                     assert any("Processing: Recording001.webm" in msg for msg in log_messages)
-                    assert any("Retry 1/2: Recording001.webm" in msg for msg in log_messages)
-                    assert any("Retry 2/2: Recording001.webm" in msg for msg in log_messages)
-                    assert any("Successfully processed: Recording001.webm" in msg for msg in log_messages)
+                    assert any(
+                        "Successfully processed with enhanced tracking: Recording001.webm" in msg
+                        for msg in log_messages
+                    )
 
-    def test_retry_exhausted_failure(self, caplog):
-        """Test when all retry attempts are exhausted."""
+    def test_single_attempt_failure(self, caplog):
+        """Test single attempt processing when script execution fails."""
         with tempfile.TemporaryDirectory() as temp_dir:
             vault_path, processor_path = self.create_test_vault_with_unprocessed(temp_dir)
 
@@ -137,18 +132,19 @@ This note has an unprocessed recording.
                     # Test single recording processing
                     result = processor._process_single_recording("Test Note", "Recording001.webm")
 
-                    # Should fail after all retries
+                    # Should fail on first attempt
                     assert result is False
 
-                    # Should have called run_script 3 times (max retries)
-                    assert mock_run.call_count == 3
+                    # Should have called run_script only once (no retries)
+                    assert mock_run.call_count == 1
 
-                    # Check log messages for all retry attempts
+                    # Check log messages for failure and broken marking
                     log_messages = [record.message for record in caplog.records]
-                    assert any("Failed to process Recording001.webm after 3 attempts" in msg for msg in log_messages)
+                    assert any("Script execution failed for: Recording001.webm" in msg for msg in log_messages)
+                    assert any("Marked Recording001.webm as failed" in msg for msg in log_messages)
 
-    def test_exception_handling_with_retry(self, caplog):
-        """Test exception handling with retry logic."""
+    def test_exception_handling_single_attempt(self, caplog):
+        """Test exception handling with single attempt."""
         with tempfile.TemporaryDirectory() as temp_dir:
             vault_path, processor_path = self.create_test_vault_with_unprocessed(temp_dir)
 
@@ -166,13 +162,9 @@ This note has an unprocessed recording.
                 # Create processor
                 processor = ObsidianProcessor(config)
 
-                # Mock the script runner to raise exception first 2 times, succeed on 3rd
+                # Mock the script runner to raise exception
                 with patch.object(processor.script_runner, "run_script") as mock_run:
-                    mock_run.side_effect = [
-                        Exception("Network error"),
-                        Exception("Timeout error"),
-                        True,  # Success on 3rd attempt
-                    ]
+                    mock_run.side_effect = Exception("Network error")
 
                     # Connect processor
                     processor.connect()
@@ -184,15 +176,16 @@ This note has an unprocessed recording.
                     # Test single recording processing
                     result = processor._process_single_recording("Test Note", "Recording001.webm")
 
-                    # Should succeed after handling exceptions
-                    assert result is True
+                    # Should fail due to exception
+                    assert result is False
 
-                    # Should have called run_script 3 times
-                    assert mock_run.call_count == 3
+                    # Should have called run_script only once
+                    assert mock_run.call_count == 1
 
                     # Check log messages for exception handling
                     log_messages = [record.message for record in caplog.records]
                     assert any("Error processing recording Recording001.webm" in msg for msg in log_messages)
+                    assert any("Marked Recording001.webm as failed due to exception" in msg for msg in log_messages)
 
     def test_robust_batch_processing(self, caplog):
         """Test robust batch processing doesn't get stuck on errors."""
@@ -241,9 +234,7 @@ title: Note 3
                 # Mock script runner: fail first recording, succeed others
                 with patch.object(processor.script_runner, "run_script") as mock_run:
                     mock_run.side_effect = [
-                        False,
-                        False,
-                        False,  # All 3 attempts for first recording fail
+                        False,  # First recording fails
                         True,  # Second recording succeeds
                         True,  # Third recording succeeds
                     ]
@@ -258,7 +249,7 @@ title: Note 3
                     # Process entire vault
                     results = processor.process_vault(dry_run=False)
 
-                    # Should have processed 2 successfully, 1 failed
+                    # Should have processed 2 successfully, 1 failed (single attempt each)
                     assert results["newly_processed"] == 2
                     assert results["failed_processing"] == 1
 
@@ -285,30 +276,29 @@ title: Note 3
                 # Create processor
                 processor = ObsidianProcessor(config)
 
-                # Mock successful script execution but failed state management
-                with patch.object(processor.script_runner, "run_script") as mock_run, patch.object(
-                    processor.state_manager, "mark_recording_processed"
-                ) as mock_mark:
+                # Mock script runner to succeed but state manager to fail
+                with patch.object(processor.script_runner, "run_script") as mock_run:
+                    mock_run.return_value = True
 
-                    mock_run.return_value = True  # Script succeeds
-                    mock_mark.return_value = False  # State management fails
+                    with patch.object(processor.state_manager, "mark_recording_processed") as mock_mark:
+                        mock_mark.return_value = False  # State management fails
 
-                    # Connect processor
-                    processor.connect()
+                        # Connect processor
+                        processor.connect()
 
-                    # Clear logs
-                    caplog.clear()
+                        # Clear logs
+                        caplog.clear()
+                        caplog.set_level(logging.INFO)
 
-                    # Test single recording processing
-                    result = processor._process_single_recording("Test Note", "Recording001.webm")
+                        # Test single recording processing
+                        result = processor._process_single_recording("Test Note", "Recording001.webm")
 
-                    # Should fail without retry
-                    assert result is False
+                        # Should fail due to state management error
+                        assert result is False
 
-                    # Should have called run_script only once (no retry for state errors)
-                    assert mock_run.call_count == 1
-                    assert mock_mark.call_count == 1
+                        # Should have called run_script only once (no retries for state errors)
+                        assert mock_run.call_count == 1
 
-                    # Check log messages
-                    log_messages = [record.message for record in caplog.records]
-                    assert any("Failed to mark recording as processed" in msg for msg in log_messages)
+                        # Check log messages
+                        log_messages = [record.message for record in caplog.records]
+                        assert any("Failed to mark recording as processed" in msg for msg in log_messages)

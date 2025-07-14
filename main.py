@@ -55,6 +55,12 @@ def main():
         help="Validate configuration and script interface",
     )
 
+    parser.add_argument(
+        "--reprocess-broken",
+        action="store_true",
+        help="Reprocess all broken recordings (removes them from broken list)",
+    )
+
     args = parser.parse_args()
 
     try:
@@ -112,7 +118,9 @@ def main():
         # Process specific note
         if args.note:
             logger.info(f"Processing specific note: {args.note}")
-            results = processor.process_specific_note(args.note, dry_run=args.dry_run)
+            results = processor.process_specific_note(
+                args.note, dry_run=args.dry_run, reprocess_broken=args.reprocess_broken
+            )
 
             print(f"\n=== Processing Results for {args.note} ===")
             print(f"Voice Recordings: {len(results['voice_recordings'])}")
@@ -131,7 +139,7 @@ def main():
 
         # Process entire vault
         logger.info("Processing entire vault...")
-        results = processor.process_vault(dry_run=args.dry_run)
+        results = processor.process_vault(dry_run=args.dry_run, reprocess_broken=args.reprocess_broken)
 
         # Display results
         print("\n=== Processing Results ===")

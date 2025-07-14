@@ -8,6 +8,7 @@ import logging
 import os
 import sys
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -546,4 +547,202 @@ class StatelessStateManager:
 
         except Exception as e:
             logger.error(f"Error marking recording as broken: {e}")
+            return False
+
+    # New improved frontmatter structure methods
+
+    def _get_postprocessor_metadata(self, note_path: str) -> Dict[str, Any]:
+        """Get obsidian-postprocessor metadata from frontmatter."""
+        try:
+            if not self.vault:
+                return {}
+
+            frontmatter = self._get_frontmatter(note_path)
+            return frontmatter.get("obsidian-postprocessor", {})
+
+        except Exception as e:
+            logger.debug(f"Error getting postprocessor metadata from {note_path}: {e}")
+            return {}
+
+    def _update_voice_memo_status(self, note_path: str, voice_filename: str, status: str, **metadata) -> bool:
+        """
+        Update voice memo status in the new frontmatter structure.
+
+        Args:
+            note_path: Path to the note
+            voice_filename: Name of the voice file
+            status: Status (pending, processing, processed, failed, broken)
+            **metadata: Additional metadata like error, transcript_length, model, etc.
+        """
+        try:
+            note_full_path = self._find_note_file(note_path)
+            if not note_full_path:
+                logger.error(f"Note file not found: {note_path}")
+                return False
+
+            # Read current content
+            with open(note_full_path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            # Parse frontmatter and content
+            frontmatter, body = self._parse_frontmatter(content)
+
+            # Initialize obsidian-postprocessor structure if needed
+            if "obsidian-postprocessor" not in frontmatter:
+                frontmatter["obsidian-postprocessor"] = {"version": "1.0", "voice-memos": {}}
+
+            postprocessor = frontmatter["obsidian-postprocessor"]
+
+            # Ensure voice-memos section exists
+            if "voice-memos" not in postprocessor:
+                postprocessor["voice-memos"] = {}
+
+            # Update voice memo entry
+            voice_memo_data = {"status": status, "updated_at": datetime.now(timezone.utc).isoformat()}
+
+            # Add additional metadata
+            voice_memo_data.update(metadata)
+
+            postprocessor["voice-memos"][voice_filename] = voice_memo_data
+
+            # Maintain backward compatibility - update legacy processed_recordings list
+            if status == "processed":
+                if "processed_recordings" not in frontmatter:
+                    frontmatter["processed_recordings"] = []
+                if voice_filename not in frontmatter["processed_recordings"]:
+                    frontmatter["processed_recordings"].append(voice_filename)
+                    frontmatter["processed_recordings"].sort()
+
+            # Write back to file
+            new_content = self._serialize_frontmatter(frontmatter, body)
+
+            with open(note_full_path, "w", encoding="utf-8") as f:
+                f.write(new_content)
+
+            logger.info(f"Updated voice memo status: {voice_filename} -> {status} in {note_path}")
+
+            # Reload the vault to pick up the changes
+            if self.suppress_frontmatter_errors:
+                with suppress_frontmatter_errors():
+                    self.vault = otools.Vault(self.vault_path).connect(attachments=True).gather()
+            else:
+                self.vault = otools.Vault(self.vault_path).connect(attachments=True).gather()
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Error updating voice memo status: {e}")
+            return False
+
+    def get_voice_memo_status(self, note_path: str, voice_filename: str) -> Optional[Dict[str, Any]]:
+        """Get detailed status for a specific voice memo."""
+        try:
+            postprocessor_data = self._get_postprocessor_metadata(note_path)
+            voice_memos = postprocessor_data.get("voice-memos", {})
+            return voice_memos.get(voice_filename)
+
+        except Exception as e:
+            logger.debug(f"Error getting voice memo status: {e}")
+            return None
+
+    def mark_recording_as_processed_enhanced(
+        self,
+        note_path: str,
+        recording_filename: str,
+        transcript_length: Optional[int] = None,
+        model: Optional[str] = None,
+        language: Optional[str] = None,
+    ) -> bool:
+        """Mark recording as processed with enhanced metadata."""
+        metadata = {}
+        if transcript_length is not None:
+            metadata["transcript_length"] = transcript_length
+        if model:
+            metadata["model"] = model
+        if language:
+            metadata["language"] = language
+
+        return self._update_voice_memo_status(note_path, recording_filename, "processed", **metadata)
+
+    def mark_recording_as_failed_enhanced(
+        self, note_path: str, recording_filename: str, error_message: str, retry_count: int = 0
+    ) -> bool:
+        """Mark recording as failed with error details."""
+        return self._update_voice_memo_status(
+            note_path, recording_filename, "failed", error=error_message, retries=retry_count
+        )
+
+    def mark_recording_as_pending(self, note_path: str, recording_filename: str) -> bool:
+        """Mark recording as pending processing."""
+        return self._update_voice_memo_status(note_path, recording_filename, "pending")
+
+    def clear_broken_recordings(self, note_path: str) -> bool:
+        """
+        Clear all broken recordings from a note, allowing them to be reprocessed.
+
+        Args:
+            note_path: Path to the note file
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            note_full_path = self._find_note_file(note_path)
+            if not note_full_path:
+                logger.error(f"Note file not found: {note_path}")
+                return False
+
+            # Read current content
+            with open(note_full_path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            # Parse frontmatter and content
+            frontmatter, body = self._parse_frontmatter(content)
+
+            # Clear legacy broken recordings
+            if "broken_recordings" in frontmatter:
+                broken_count = len(frontmatter["broken_recordings"])
+                frontmatter["broken_recordings"] = []
+                logger.info(f"Cleared {broken_count} broken recordings from legacy list in {note_path}")
+
+            if "broken_recordings_info" in frontmatter:
+                frontmatter["broken_recordings_info"] = {}
+                logger.info(f"Cleared broken recordings info from legacy list in {note_path}")
+
+            # Clear enhanced broken recordings
+            if "obsidian-postprocessor" in frontmatter:
+                postprocessor = frontmatter["obsidian-postprocessor"]
+                if "voice-memos" in postprocessor:
+                    voice_memos = postprocessor["voice-memos"]
+                    # Remove all recordings with "failed" or "broken" status
+                    cleared_files = []
+                    for filename, data in list(voice_memos.items()):
+                        if data.get("status") in ["failed", "broken"]:
+                            cleared_files.append(filename)
+                            del voice_memos[filename]
+
+                    if cleared_files:
+                        logger.info(
+                            f"Cleared {len(cleared_files)} broken recordings from enhanced tracking in {note_path}"
+                        )
+
+            # Write back to file
+            new_content = self._serialize_frontmatter(frontmatter, body)
+
+            with open(note_full_path, "w", encoding="utf-8") as f:
+                f.write(new_content)
+
+            logger.info(f"Successfully cleared broken recordings from {note_path}")
+
+            # Reload the vault to pick up the changes
+            if self.suppress_frontmatter_errors:
+                with suppress_frontmatter_errors():
+                    self.vault = otools.Vault(self.vault_path).connect(attachments=True).gather()
+            else:
+                self.vault = otools.Vault(self.vault_path).connect(attachments=True).gather()
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Error clearing broken recordings: {e}")
             return False

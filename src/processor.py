@@ -5,7 +5,6 @@ Coordinates voice memo detection, state management, and script execution.
 """
 
 import logging
-import time
 from typing import Dict, List
 
 from .config import Config
@@ -39,7 +38,7 @@ class ObsidianProcessor:
             logger.error(f"Failed to connect ObsidianProcessor: {e}")
             raise
 
-    def process_vault(self, dry_run: bool = False) -> Dict[str, any]:
+    def process_vault(self, dry_run: bool = False, reprocess_broken: bool = False) -> Dict[str, any]:
         """
         Process the entire vault for unprocessed voice memos.
 
@@ -92,6 +91,20 @@ class ObsidianProcessor:
             logger.info(f"Already processed: {results['processed_recordings']}")
             logger.info(f"Unprocessed: {results['unprocessed_recordings']}")
 
+            # Step 3.5: Clear broken recordings if requested
+            if reprocess_broken:
+                logger.info("Clearing broken recordings for reprocessing...")
+                cleared_count = 0
+                for note_path in verified_notes:
+                    if self.state_manager.clear_broken_recordings(note_path):
+                        cleared_count += 1
+                logger.info(f"Cleared broken recordings from {cleared_count} notes")
+
+                # Re-calculate stats after clearing broken recordings
+                stats = self.state_manager.get_processing_stats(verified_notes)
+                results.update(stats)
+                logger.info(f"After clearing broken recordings - Unprocessed: {results['unprocessed_recordings']}")
+
             # Step 4: Process unprocessed recordings
             if not dry_run:
                 logger.info("Processing unprocessed recordings...")
@@ -142,7 +155,7 @@ class ObsidianProcessor:
                     logger.info(f"Processing recording {i+1}/{len(unprocessed)}: {voice_file}")
 
                     try:
-                        # Process with timeout to prevent hanging
+                        # Process recording (single attempt, no retries)
                         if self._process_single_recording(note_path, voice_file):
                             results["newly_processed"] += 1
                             logger.info(f"✓ Successfully processed: {voice_file}")
@@ -173,78 +186,99 @@ class ObsidianProcessor:
         )
         return results
 
-    def _process_single_recording(self, note_path: str, voice_file: str, max_retries: int = 3) -> bool:
+    def _process_single_recording(self, note_path: str, voice_file: str) -> bool:
         """
-        Process a single voice recording with retry logic.
+        Process a single voice recording with single attempt (no retries).
+
+        Broken recordings should only be tested once during a run to avoid
+        issues with potentially problematic Whisper service.
 
         Args:
             note_path: Path to the note file
             voice_file: Voice file name
-            max_retries: Maximum number of retry attempts
 
         Returns:
             True if processing succeeded, False otherwise
         """
-        for attempt in range(max_retries):
-            try:
-                # Get full paths
-                note_full_path = self.config.vault_path / f"{note_path}.md"
-                voice_full_path = self.detector.get_voice_file_path(note_path, voice_file)
+        try:
+            # Get full paths
+            note_full_path = self.config.vault_path / f"{note_path}.md"
+            voice_full_path = self.detector.get_voice_file_path(note_path, voice_file)
 
-                if attempt == 0:
-                    logger.info(f"Processing: {voice_file} from {note_path}")
-                else:
-                    logger.info(f"Retry {attempt}/{max_retries-1}: {voice_file} from {note_path}")
+            logger.info(f"Processing: {voice_file} from {note_path}")
 
-                # Execute the processing script
-                success = self.script_runner.run_script(
-                    note_full_path,
-                    voice_full_path,
-                    env_vars=self._get_script_env_vars(),
+            # Mark as pending before processing starts
+            self.state_manager.mark_recording_as_pending(note_path, voice_file)
+
+            # Execute the processing script (single attempt)
+            success = self.script_runner.run_script(
+                note_full_path,
+                voice_full_path,
+                env_vars=self._get_script_env_vars(),
+            )
+
+            if success:
+                # Mark as processed in frontmatter with enhanced metadata
+                enhanced_success = self.state_manager.mark_recording_as_processed_enhanced(
+                    note_path,
+                    voice_file,
+                    # TODO: Get these from script runner results if available
+                    model="small",  # Default model from processor script
                 )
 
-                if success:
-                    # Mark as processed in frontmatter
-                    if self.state_manager.mark_recording_processed(note_path, voice_file):
-                        logger.info(f"Successfully processed: {voice_file}")
-                        return True
-                    else:
-                        logger.error(f"Failed to mark recording as processed: {voice_file}")
-                        # This is a state management error, don't retry
-                        return False
-                else:
-                    logger.warning(f"Script execution failed for: {voice_file} (attempt {attempt + 1}/{max_retries})")
-                    if attempt < max_retries - 1:
-                        # Wait a bit before retry
-                        time.sleep(1)
-                    continue
+                # Also mark with legacy method for backward compatibility
+                legacy_success = self.state_manager.mark_recording_processed(note_path, voice_file)
 
-            except Exception as e:
-                logger.error(f"Error processing recording {voice_file} (attempt {attempt + 1}/{max_retries}): {e}")
-                if attempt < max_retries - 1:
-                    # Wait a bit before retry
-                    time.sleep(1)
-                    continue
+                if enhanced_success and legacy_success:
+                    logger.info(f"Successfully processed with enhanced tracking: {voice_file}")
+                    return True
                 else:
-                    # Final attempt failed
+                    logger.error(f"Failed to mark recording as processed: {voice_file}")
+                    # This is a state management error, don't retry
                     return False
+            else:
+                logger.warning(f"Script execution failed for: {voice_file} - marking as failed")
 
-        # After all retries failed, mark the recording as broken
-        logger.error(f"Failed to process {voice_file} after {max_retries} attempts - marking as broken")
+                # Mark as failed with enhanced error information
+                failed_success = self.state_manager.mark_recording_as_failed_enhanced(
+                    note_path, voice_file, "Processing failed - possible Whisper service issue", retry_count=0
+                )
 
-        # Mark as broken with error information
-        broken_success = self.state_manager.mark_recording_broken(
-            note_path,
-            voice_file,
-            f"Processing failed after {max_retries} attempts",
-        )
+                # Also mark as broken with legacy method for backward compatibility
+                broken_success = self.state_manager.mark_recording_broken(
+                    note_path,
+                    voice_file,
+                    "Processing failed - possible Whisper service issue",
+                )
 
-        if broken_success:
-            logger.warning(f"Marked {voice_file} as broken to prevent future processing attempts")
-        else:
-            logger.error(f"Failed to mark {voice_file} as broken")
+                if failed_success and broken_success:
+                    logger.warning(f"Marked {voice_file} as failed with enhanced tracking")
+                else:
+                    logger.error(f"Failed to mark {voice_file} as failed")
 
-        return False
+                return False
+
+        except Exception as e:
+            logger.error(f"Error processing recording {voice_file}: {e}")
+
+            # Mark as failed with enhanced error information
+            failed_success = self.state_manager.mark_recording_as_failed_enhanced(
+                note_path, voice_file, f"Processing error: {str(e)}", retry_count=0
+            )
+
+            # Also mark as broken with legacy method for backward compatibility
+            broken_success = self.state_manager.mark_recording_broken(
+                note_path,
+                voice_file,
+                f"Processing error: {str(e)}",
+            )
+
+            if failed_success and broken_success:
+                logger.warning(f"Marked {voice_file} as failed due to exception")
+            else:
+                logger.error(f"Failed to mark {voice_file} as failed")
+
+            return False
 
     def _get_script_env_vars(self) -> Dict[str, str]:
         """Get environment variables for script execution."""
@@ -295,7 +329,9 @@ class ObsidianProcessor:
             logger.error(f"Error getting vault status: {e}")
             return {"error": str(e)}
 
-    def process_specific_note(self, note_path: str, dry_run: bool = False) -> Dict[str, any]:
+    def process_specific_note(
+        self, note_path: str, dry_run: bool = False, reprocess_broken: bool = False
+    ) -> Dict[str, any]:
         """
         Process a specific note for voice memos.
 
@@ -358,6 +394,11 @@ class ObsidianProcessor:
             if not verified_files:
                 logger.warning(f"No valid voice files found for {note_path}")
                 return results
+
+            # Clear broken recordings if requested
+            if reprocess_broken:
+                logger.info(f"Clearing broken recordings for {note_path}...")
+                self.state_manager.clear_broken_recordings(note_path)
 
             # Get processing status
             processed = self.state_manager.get_processed_recordings(note_path)
