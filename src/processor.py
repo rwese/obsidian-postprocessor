@@ -5,6 +5,7 @@ Coordinates voice memo detection, state management, and script execution.
 """
 
 import logging
+import time
 from typing import Dict, List
 
 from .config import Config
@@ -18,13 +19,17 @@ logger = logging.getLogger(__name__)
 class ObsidianProcessor:
     """Main processor class that coordinates all components."""
 
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, structured_logger=None, detailed_output_writer=None):
         self.config = config
         suppress_errors = config.frontmatter_error_level == "SILENT"
         self.detector = VoiceMemoDetector(config.vault_path, config.voice_patterns, suppress_errors)
         self.state_manager = StatelessStateManager(config.vault_path, config.frontmatter_error_level)
         self.script_runner = ScriptRunner(config.processor_script_path)
         self._connected = False
+
+        # Enhanced logging support
+        self.structured_logger = structured_logger
+        self.detailed_output_writer = detailed_output_writer
 
     def connect(self) -> "ObsidianProcessor":
         """Connect to vault and initialize components."""
@@ -200,22 +205,55 @@ class ObsidianProcessor:
         Returns:
             True if processing succeeded, False otherwise
         """
+        processing_details = {
+            "note_path": note_path,
+            "voice_file": voice_file,
+            "start_time": None,
+            "end_time": None,
+            "duration": None,
+            "success": False,
+            "error": None,
+            "script_output": None,
+            "script_error": None,
+            "model": None,
+            "transcript_length": None,
+        }
+
         try:
             # Get full paths
             note_full_path = self.config.vault_path / f"{note_path}.md"
             voice_full_path = self.detector.get_voice_file_path(note_path, voice_file)
 
+            # Use structured logging if available
+            if self.structured_logger:
+                operation_id = self.structured_logger.log_operation_start(
+                    "process_single_recording",
+                    note_path=note_path,
+                    voice_file=voice_file,
+                    voice_full_path=str(voice_full_path),
+                )
+            else:
+                operation_id = None
+
+            processing_details["start_time"] = time.time()
             logger.info(f"Processing: {voice_file} from {note_path}")
 
             # Mark as pending before processing starts
             self.state_manager.mark_recording_as_pending(note_path, voice_file)
 
             # Execute the processing script (single attempt)
+            script_start_time = time.time()
             success = self.script_runner.run_script(
                 note_full_path,
                 voice_full_path,
                 env_vars=self._get_script_env_vars(),
             )
+            script_duration = time.time() - script_start_time
+
+            processing_details["end_time"] = time.time()
+            processing_details["duration"] = processing_details["end_time"] - processing_details["start_time"]
+            processing_details["success"] = success
+            processing_details["script_duration"] = script_duration
 
             if success:
                 # Mark as processed in frontmatter with enhanced metadata
@@ -231,24 +269,48 @@ class ObsidianProcessor:
 
                 if enhanced_success and legacy_success:
                     logger.info(f"Successfully processed with enhanced tracking: {voice_file}")
+
+                    # Log structured data
+                    if self.structured_logger:
+                        self.structured_logger.log_file_processing(
+                            note_path,
+                            voice_file,
+                            "success",
+                            duration=processing_details["duration"],
+                            script_duration=script_duration,
+                        )
+                        self.structured_logger.log_operation_end(operation_id, success=True)
+
+                    # Write detailed output file
+                    if self.detailed_output_writer:
+                        self.detailed_output_writer.write_processing_details(note_path, voice_file, processing_details)
+
                     return True
                 else:
                     logger.error(f"Failed to mark recording as processed: {voice_file}")
-                    # This is a state management error, don't retry
+                    processing_details["error"] = "Failed to mark recording as processed"
+
+                    if self.structured_logger:
+                        self.structured_logger.log_operation_end(
+                            operation_id, success=False, error="State management error"
+                        )
+
                     return False
             else:
                 logger.warning(f"Script execution failed for: {voice_file} - marking as failed")
+                error_message = "Processing failed - possible Whisper service issue"
+                processing_details["error"] = error_message
 
                 # Mark as failed with enhanced error information
                 failed_success = self.state_manager.mark_recording_as_failed_enhanced(
-                    note_path, voice_file, "Processing failed - possible Whisper service issue", retry_count=0
+                    note_path, voice_file, error_message, retry_count=0
                 )
 
                 # Also mark as broken with legacy method for backward compatibility
                 broken_success = self.state_manager.mark_recording_broken(
                     note_path,
                     voice_file,
-                    "Processing failed - possible Whisper service issue",
+                    error_message,
                 )
 
                 if failed_success and broken_success:
@@ -256,27 +318,55 @@ class ObsidianProcessor:
                 else:
                     logger.error(f"Failed to mark {voice_file} as failed")
 
+                # Log structured data
+                if self.structured_logger:
+                    self.structured_logger.log_file_processing(
+                        note_path, voice_file, "failed", duration=processing_details["duration"], error=error_message
+                    )
+                    self.structured_logger.log_operation_end(operation_id, success=False, error=error_message)
+
+                # Write detailed error file
+                if self.detailed_output_writer:
+                    self.detailed_output_writer.write_error_details(note_path, voice_file, processing_details)
+
                 return False
 
         except Exception as e:
             logger.error(f"Error processing recording {voice_file}: {e}")
+            error_message = f"Processing error: {str(e)}"
+            processing_details["error"] = error_message
+            processing_details["end_time"] = time.time()
+            if processing_details["start_time"]:
+                processing_details["duration"] = processing_details["end_time"] - processing_details["start_time"]
 
             # Mark as failed with enhanced error information
             failed_success = self.state_manager.mark_recording_as_failed_enhanced(
-                note_path, voice_file, f"Processing error: {str(e)}", retry_count=0
+                note_path, voice_file, error_message, retry_count=0
             )
 
             # Also mark as broken with legacy method for backward compatibility
             broken_success = self.state_manager.mark_recording_broken(
                 note_path,
                 voice_file,
-                f"Processing error: {str(e)}",
+                error_message,
             )
 
             if failed_success and broken_success:
                 logger.warning(f"Marked {voice_file} as failed due to exception")
             else:
                 logger.error(f"Failed to mark {voice_file} as failed")
+
+            # Log structured data
+            if self.structured_logger:
+                self.structured_logger.log_file_processing(
+                    note_path, voice_file, "failed", duration=processing_details["duration"], error=error_message
+                )
+                if "operation_id" in locals() and operation_id:
+                    self.structured_logger.log_operation_end(operation_id, success=False, error=error_message)
+
+            # Write detailed error file
+            if self.detailed_output_writer:
+                self.detailed_output_writer.write_error_details(note_path, voice_file, processing_details)
 
             return False
 

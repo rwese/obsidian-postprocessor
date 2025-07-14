@@ -61,15 +61,69 @@ def main():
         help="Reprocess all broken recordings (removes them from broken list)",
     )
 
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug mode with structured logging and detailed output files",
+    )
+
+    parser.add_argument(
+        "--metrics",
+        action="store_true",
+        help="Start Prometheus metrics server",
+    )
+
+    parser.add_argument(
+        "--cleanup-logs",
+        action="store_true",
+        help="Clean up old detailed log files and exit",
+    )
+
     args = parser.parse_args()
 
     try:
         # Load configuration
         config = Config()
 
+        # Override config with command line arguments
+        if args.debug:
+            config.debug_mode = True
+            config.structured_logging = True
+            config.log_level = "DEBUG"
+
         # Set up logging
         setup_logging(config.log_level)
         logger = logging.getLogger(__name__)
+
+        # Initialize structured logging if enabled
+        structured_logger = None
+        metrics_server = None
+        detailed_output_writer = None
+
+        if config.structured_logging or config.debug_mode:
+            from src.structured_logger import DetailedOutputWriter, StructuredLogger
+
+            structured_logger = StructuredLogger(
+                name="obsidian-postprocessor",
+                vault_path=config.vault_path,
+                log_level=config.log_level,
+                debug_mode=config.debug_mode,
+            )
+            detailed_output_writer = DetailedOutputWriter(config.vault_path)
+
+            # Clean up old logs if requested
+            if args.cleanup_logs:
+                detailed_output_writer.cleanup_old_logs(config.log_cleanup_days)
+                logger.info("Cleaned up old log files")
+                return 0
+
+        # Initialize metrics server if requested
+        if args.metrics:
+            from src.metrics import MetricsServer
+
+            metrics_server = MetricsServer(config.prometheus_port)
+            metrics_server.start()
+            logger.info(f"Metrics server started on port {config.prometheus_port}")
 
         # Show configuration if requested
         if args.config:
@@ -83,7 +137,7 @@ def main():
             logger.info("Configuration validation passed")
 
             # Create processor and validate script interface
-            processor = ObsidianProcessor(config)
+            processor = ObsidianProcessor(config, structured_logger, detailed_output_writer)
             if processor.script_runner.validate_script_interface():
                 logger.info("Script interface validation passed")
             else:
@@ -97,7 +151,7 @@ def main():
 
         # Create and connect processor
         logger.info("Initializing processor...")
-        processor = ObsidianProcessor(config).connect()
+        processor = ObsidianProcessor(config, structured_logger, detailed_output_writer).connect()
 
         # Show status if requested
         if args.status:
@@ -161,6 +215,10 @@ def main():
         else:
             logger.info("Processing completed")
 
+        # Update metrics from structured logger if available
+        if metrics_server and structured_logger:
+            metrics_server.get_metrics_collector().update_from_structured_logger(structured_logger)
+
         return 0
 
     except KeyboardInterrupt:
@@ -169,6 +227,10 @@ def main():
     except Exception as e:
         logger.error(f"Unexpected error: {e}", exc_info=True)
         return 1
+    finally:
+        # Clean up metrics server if running
+        if "metrics_server" in locals() and metrics_server:
+            metrics_server.stop()
 
 
 if __name__ == "__main__":

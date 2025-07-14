@@ -21,6 +21,10 @@ class Config:
         self.watch_mode = self._get_watch_mode()
         self.frontmatter_error_level = self._get_frontmatter_error_level()
         self.debug_voice_detection = self._get_debug_voice_detection()
+        self.debug_mode = self._get_debug_mode()
+        self.prometheus_port = self._get_prometheus_port()
+        self.log_cleanup_days = self._get_log_cleanup_days()
+        self.structured_logging = self._get_structured_logging()
 
     def _get_vault_path(self) -> Path:
         """Get vault path from environment or default."""
@@ -103,6 +107,38 @@ class Config:
         if not self.processor_script_path.is_file():
             raise ValueError(f"Processor script is not a file: {self.processor_script_path}")
 
+    def _get_debug_mode(self) -> bool:
+        """Get debug mode from environment or default."""
+        return os.getenv("DEBUG_MODE", "false").lower() in (
+            "true",
+            "1",
+            "yes",
+            "on",
+        )
+
+    def _get_prometheus_port(self) -> int:
+        """Get Prometheus metrics port from environment or default."""
+        try:
+            return int(os.getenv("PROMETHEUS_PORT", "8000"))
+        except ValueError:
+            return 8000
+
+    def _get_log_cleanup_days(self) -> int:
+        """Get log cleanup days from environment or default."""
+        try:
+            return int(os.getenv("LOG_CLEANUP_DAYS", "7"))
+        except ValueError:
+            return 7
+
+    def _get_structured_logging(self) -> bool:
+        """Get structured logging flag from environment or default."""
+        return os.getenv("STRUCTURED_LOGGING", "false").lower() in (
+            "true",
+            "1",
+            "yes",
+            "on",
+        )
+
     def __str__(self) -> str:
         """String representation of configuration."""
         return f"""Obsidian Post-Processor Configuration:
@@ -113,4 +149,8 @@ class Config:
   Log Level: {self.log_level}
   Watch Mode: {self.watch_mode}
   Frontmatter Error Level: {self.frontmatter_error_level}
-  Debug Voice Detection: {self.debug_voice_detection}"""
+  Debug Voice Detection: {self.debug_voice_detection}
+  Debug Mode: {self.debug_mode}
+  Prometheus Port: {self.prometheus_port}
+  Log Cleanup Days: {self.log_cleanup_days}
+  Structured Logging: {self.structured_logging}"""

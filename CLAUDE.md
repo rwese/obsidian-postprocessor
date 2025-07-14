@@ -36,6 +36,7 @@ Obsidian Post-Processor is a stateless Python tool that automatically processes 
 - **StateManager** (`src/state_manager.py`) - Manages processing state via YAML frontmatter
 - **ScriptRunner** (`src/script_runner.py`) - Executes post-processing scripts
 - **PostProcessor** (`src/post_processor.py`) - Main orchestration class
+- **StructuredLogger** (`src/structured_logger.py`) - Enhanced logging with timing and detailed output
 
 ### Design Principles
 - **Stateless**: No external databases - all state in note frontmatter
@@ -160,3 +161,86 @@ pre-commit install
 pre-commit run --all-files  # Run on all files
 pre-commit run flake8       # Run specific hook
 ```
+
+## Current Development State (2025-07-14)
+
+### Recent Enhancements In Progress
+
+**Enhanced Logging and Monitoring System**
+- **Status**: Implementation in progress
+- **Goal**: Add comprehensive error reporting, structured logging, and monitoring capabilities
+- **Components Being Added**:
+  - Structured logging with timing information (`src/structured_logger.py`)
+  - Detailed output files next to processed notes for debugging
+  - Debug mode with configurable log levels
+  - Prometheus metrics endpoint for monitoring
+  - Performance timing and operation tracking
+
+**Key Issues Being Addressed**:
+1. **Insufficient Error Reporting**: Current system lacks detailed error information when processing fails
+2. **Limited Debugging Capabilities**: Need better visibility into processing pipeline
+3. **No Performance Monitoring**: No metrics on processing times, success rates, etc.
+4. **Missing Operation Context**: Logs don't provide enough context about what was happening when errors occur
+
+### Implementation Progress
+
+**Completed**:
+- ✅ Structured logging system with timing and context (`src/structured_logger.py`)
+- ✅ Detailed output file writer for debugging information
+- ✅ Enhanced formatter with JSON output for debug mode
+- ✅ Operation context tracking and metrics collection
+
+**In Progress**:
+- 🔄 Integration with existing components (processor, runner, state_manager)
+- 🔄 Debug mode and enhanced configuration options
+- 🔄 Prometheus metrics endpoint
+- 🔄 Comprehensive test suite for new features
+
+**Planned**:
+- 📋 Update all components to use structured logging
+- 📋 Add timing information to all operations
+- 📋 Create detailed error output files for failed processing
+- 📋 Add performance monitoring dashboard
+- 📋 Comprehensive testing and validation
+
+### For Future AI Agents
+
+**When Working on This Project**:
+1. **Use TodoWrite tool** to track progress and break down complex tasks
+2. **Test thoroughly** - Run `python -m pytest tests/` before committing
+3. **Maintain backward compatibility** - Don't break existing frontmatter structure
+4. **Follow structured logging patterns** - Use StructuredLogger for all new logging
+5. **Performance focus** - Add timing information to all operations
+6. **Error handling** - Always provide detailed error context and recovery options
+
+**Key Integration Points**:
+- **ScriptRunner** (`src/runner.py`) - Needs structured logging for script execution
+- **StateManager** (`src/state_manager.py`) - Needs timing and detailed error reporting
+- **PostProcessor** (`src/processor.py`) - Main integration point for enhanced logging
+- **Config** (`src/config.py`) - Add new configuration options for debug mode
+
+**Testing Strategy**:
+- Unit tests for each new component
+- Integration tests for logging workflow
+- Performance tests for timing accuracy
+- Error simulation tests for debugging features
+
+**Monitoring Requirements**:
+- Processing success/failure rates
+- Average processing times per file
+- Script execution performance
+- Error frequency and patterns
+- Resource utilization metrics
+
+### Environment Variables (Enhanced)
+- `OPENAI_API_KEY` - For Whisper API transcription
+- `LOG_LEVEL` - Set logging verbosity (DEBUG, INFO, WARNING, ERROR)
+- `DEBUG_MODE` - Enable structured JSON logging and detailed output files
+- `PROMETHEUS_PORT` - Port for metrics endpoint (default: 8000)
+- `LOG_CLEANUP_DAYS` - Days to keep detailed log files (default: 7)
+
+### New Development Commands
+- `python main.py --debug` - Enable debug mode with structured logging
+- `python main.py --metrics` - Start with Prometheus metrics endpoint
+- `python main.py --cleanup-logs` - Clean up old detailed log files
+- `python main.py --performance-test` - Run performance analysis
