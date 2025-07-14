@@ -1,36 +1,62 @@
 # Obsidian Post-Processor V2
 
-A minimal, async-first tool for processing voice memos in Obsidian vaults. Automatically detects embedded voice recordings and executes configurable post-processing scripts while tracking state through frontmatter.
+A minimal, async-first tool for processing voice memos and other attachments in Obsidian vaults. V2 provides a clean, configuration-driven, plugin-based architecture for reliable voice memo transcription.
 
-## High-Level Concept
+## Features
 
-The Obsidian Post-Processor V2 monitors an Obsidian vault for voice memos (embedded audio files like `![[Recording.m4a]]`) and executes custom post-processing scripts on them. It maintains a **stateless** design by tracking processed recordings in the frontmatter of each note, ensuring idempotent operations.
+- **Async-First Architecture**: Built for concurrent processing with configurable limits
+- **Configuration-Driven**: YAML-based configuration with environment variable support
+- **Template-Safe**: Handles Obsidian template syntax gracefully
+- **Flexible Exclusion**: Glob pattern-based file exclusion
+- **Useful Dry-Run**: Actually scans vault and shows what would be processed
+- **Command-Line Overrides**: All configuration options available via CLI
+- **Environment Variable Interpolation**: `${VARIABLE}` expansion in config files
+- **Comprehensive Validation**: Validates configuration values and processor settings
 
-### Key Features
+## Quick Start
 
-- **Minimal Dependencies**: Only PyYAML, aiofiles, and click
-- **Async-First**: Built for concurrent processing from the ground up
-- **Configuration-Driven**: YAML-based configuration with flexible exclusion patterns
-- **Template-Safe**: Handles Obsidian templater syntax gracefully
-- **Plugin Architecture**: Extensible processor system for different backends
-- **Flexible Exclusions**: Glob pattern-based file and directory exclusion
-- **Robust Error Handling**: Graceful handling of malformed frontmatter and template syntax
+### 1. Setup Environment
 
-## Architecture
+```bash
+# Clone and enter directory
+git clone https://github.com/rwese/obsidian-postprocessor.git
+cd obsidian-postprocessor
 
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# Optional: Setup direnv for automatic venv activation
+direnv allow  # If you have direnv installed
 ```
-┌─────────────────────┐    ┌─────────────────────┐    ┌─────────────────────┐
-│  Vault Scanner      │    │  Frontmatter        │    │  Processor          │
-│  (Async)            │    │  Parser             │    │  Registry           │
-│                     │    │                     │    │                     │
-│  Find ![[*.m4a]]    │───▶│  Template-Safe      │───▶│  Plugin-Based       │
-│  with exclusions    │    │  YAML Parsing       │    │  Async Processing   │
-└─────────────────────┘    └─────────────────────┘    └─────────────────────┘
+
+### 2. Configuration
+
+```bash
+# Generate default configuration
+python main.py --generate-config > config.yaml
+
+# Edit config.yaml and set your vault path and API keys
+# Or use environment variables and CLI overrides
+```
+
+### 3. Usage
+
+```bash
+# Validate configuration
+python main.py --vault-path ~/Obsidian --validate
+
+# Dry run (shows what would be processed)
+python main.py --vault-path ~/Obsidian --dry-run
+
+# Process voice memos (when core implementation is complete)
+python main.py --vault-path ~/Obsidian
 ```
 
 ## Configuration
 
-Configure via YAML file (`config.yaml`):
+### YAML Configuration (`config.yaml`)
 
 ```yaml
 vault_path: "/path/to/your/obsidian/vault"
@@ -57,390 +83,175 @@ processors:
       api_key: "${OPENAI_API_KEY}"
       model: "whisper-1"
       language: "auto"
+
+# Logging configuration
+logging:
+  level: "INFO"
+  file: "logs/processor.log"
+  format: "structured"
 ```
 
-### Configuration Generation
+### Environment Variables
 
-Generate a default configuration file:
+Create a `.env` file (copy from `.env.example`):
 
 ```bash
-# Generate default config to stdout
-python main.py --generate-config
+# OpenAI API key for Whisper transcription
+OPENAI_API_KEY=your_openai_api_key_here
 
-# Save to file
-python main.py --generate-config > config.yaml
+# Optional: Custom transcription service
+TRANSCRIPTION_API_URL=http://localhost:8080/transcribe
+TRANSCRIPTION_API_KEY=your_custom_api_key
+
+# Logging
+LOG_LEVEL=INFO
 ```
 
-## Usage
+### Command-Line Overrides
 
-### Basic Usage
+All configuration options can be overridden via command-line:
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
+python main.py \
+  --vault-path ~/Obsidian \
+  --concurrency-limit 10 \
+  --timeout 120 \
+  --retry-attempts 5 \
+  --exclude-pattern "archive/**" \
+  --exclude-pattern "templates/**" \
+  --log-level DEBUG \
+  --dry-run
+```
+
+## CLI Usage
+
+### Basic Commands
+
+```bash
+# Help
+python main.py --help
 
 # Generate default configuration
-python main.py --generate-config > config.yaml
-
-# Edit config.yaml to set your vault path and preferences
+python main.py --generate-config
 
 # Validate configuration
 python main.py --validate
 
-# Dry run (analyze without processing)
+# Dry run (scan vault and show processing plan)
 python main.py --dry-run
 
-# Process vault
+# Process vault (when implementation is complete)
 python main.py
-
-# Use custom config file
-python main.py --config /path/to/custom-config.yaml
-
-# Set log level
-python main.py --log-level DEBUG
 ```
-
-### Command-Line Configuration Overrides
-
-All configuration options can be overridden via command-line flags:
-
-```bash
-# Override vault path
-python main.py --vault-path /path/to/vault
-
-# Override processing settings
-python main.py --concurrency-limit 10 --timeout 120 --retry-attempts 5
-
-# Add exclusion patterns
-python main.py --exclude-pattern "drafts/**" --exclude-pattern "temp/**"
-
-# Combine multiple overrides
-python main.py \
-  --config custom-config.yaml \
-  --vault-path /path/to/vault \
-  --concurrency-limit 8 \
-  --timeout 180 \
-  --exclude-pattern "archive/**" \
-  --log-level DEBUG \
-  --dry-run
-```
-
-### Available Command-Line Options
-
-| Option | Type | Description |
-|--------|------|-------------|
-| `--config PATH` | Path | Path to configuration file |
-| `--vault-path DIRECTORY` | Path | Path to Obsidian vault (overrides config) |
-| `--concurrency-limit INTEGER` | Number | Maximum concurrent processing tasks |
-| `--timeout INTEGER` | Seconds | Processing timeout in seconds |
-| `--retry-attempts INTEGER` | Number | Number of retry attempts for failed processing |
-| `--exclude-pattern TEXT` | Pattern | Exclusion pattern (can be used multiple times) |
-| `--log-level LEVEL` | Choice | Set logging level (debug, info, warning, error) |
-| `--dry-run` | Flag | Show what would be processed without executing |
-| `--validate` | Flag | Validate configuration and exit |
-| `--generate-config` | Flag | Generate default configuration to stdout |
-
-### Docker Usage
-
-```bash
-# Build image
-docker build -t obsidian-postprocessor .
-
-# Generate default config
-docker run obsidian-postprocessor --generate-config > config.yaml
-
-# Run container with config file
-docker run -v "/path/to/your/vault:/vault" \
-  -v "$PWD/config.yaml:/app/config.yaml" \
-  obsidian-postprocessor
-
-# Run dry-run with command-line overrides
-docker run -v "/path/to/your/vault:/vault" \
-  -v "$PWD/config.yaml:/app/config.yaml" \
-  obsidian-postprocessor \
-  --vault-path /vault \
-  --concurrency-limit 8 \
-  --timeout 180 \
-  --exclude-pattern "templates/**" \
-  --log-level DEBUG \
-  --dry-run
-
-# Run without config file using only command-line options
-docker run -v "/path/to/your/vault:/vault" \
-  obsidian-postprocessor \
-  --vault-path /vault \
-  --concurrency-limit 5 \
-  --timeout 300 \
-  --retry-attempts 3 \
-  --exclude-pattern "templates/**" \
-  --exclude-pattern "archive/**" \
-  --log-level INFO
-
-# Validate configuration
-docker run -v "/path/to/your/vault:/vault" \
-  obsidian-postprocessor \
-  --vault-path /vault \
-  --validate
-```
-
-## Template-Safe Frontmatter Handling
-
-V2 gracefully handles Obsidian templater syntax and malformed frontmatter:
-
-```yaml
----
-title: "<%tp.date.now()%>"
-tags: [{{tag}}]
-dynamic: <%tp.system.prompt()%>
----
-```
-
-**Template syntax is preserved**, not parsed as YAML. The processor will:
-- Skip parsing template variables like `<%tp.date.now()%>`
-- Preserve `{{variable}}` syntax
-- Handle malformed YAML gracefully
-- Continue processing other notes on errors
-
-## State Management
-
-The tool tracks processed recordings in frontmatter using the `postprocessor` section:
-
-```yaml
----
-title: "Meeting Notes"
-postprocessor:
-  transcribe:
-    status: "completed"
-    timestamp: "2024-01-01T12:00:00Z"
-    files:
-      - "recording.m4a"
----
-
-Here are my voice memos:
-
-![[recording.m4a]]
-```
-
-## Example Workflow
-
-1. **Async Vault Scanning**: Scan vault for notes with voice attachments (`![[*.m4a]]`, `![[*.mp3]]`, etc.)
-2. **Exclusion Filtering**: Skip notes matching exclusion patterns (templates, archives, etc.)
-3. **Template-Safe Parsing**: Parse frontmatter while preserving template syntax
-4. **State Check**: Check `postprocessor` section for already processed recordings
-5. **Concurrent Processing**: Execute processors on new recordings with configurable concurrency
-6. **State Update**: Mark recordings as processed in frontmatter
-7. **Error Handling**: Retry failed operations with exponential backoff
-
-## Voice Memo Transcription
-
-The default post-processing script uses a Whisper HTTP API to transcribe voice memos and add transcripts to your notes. No API keys required!
-
-### Setup
-
-1. Ensure your Whisper API server is running and accessible (default: `http://host.docker.internal:8020`)
-2. The post-processor will connect to the external API endpoint for transcription
-
-### How it works
-
-1. **Automatic Language Detection**: Detects language from filename patterns (`recording_en.m4a`, `meeting_de.wav`)
-2. **HTTP API Transcription**: Uploads audio files to the Whisper API endpoint for transcription
-3. **Note Update**: Adds the transcript to your note after the voice memo embed
 
 ### Configuration Options
 
-You can customize the transcription process with environment variables:
-
-- `WHISPER_MODEL`: Model size (tiny, base, small, medium, large) - default: `small`
-- `WHISPER_LANGUAGE`: Force specific language (e.g., en, de, fr) - default: auto-detect
-- `WHISPER_API_URL`: API endpoint URL - default: `http://host.docker.internal:8020`
-
-### Example Result
-
-Before processing:
-```markdown
----
-title: Meeting Notes
----
-
-Here's my voice memo from the meeting:
-
-![[Recording_en_20250711132921.m4a]]
-```
-
-After processing:
-```markdown
----
-title: Meeting Notes
-processed_recordings:
-  - "Recording_en_20250711132921.m4a"
----
-
-Here's my voice memo from the meeting:
-
-![[Recording_en_20250711132921.m4a]]
-
-> **Transcript:**
-> This is the transcript of your voice memo. The meeting covered three main topics: project timeline, budget allocation, and team assignments.
-```
-
-### Custom Post-Processing Script Interface
-
-If you want to use a different post-processing script, it should accept:
-
-```bash
-python your_script.py <note_path> <voice_file_path>
-```
-
-Environment variables available to script:
-- `VAULT_PATH`: Path to the vault
-- `LOG_LEVEL`: Current log level
-- `WHISPER_MODEL`: Whisper model size (tiny, base, small, medium, large)
-- `WHISPER_LANGUAGE`: Force specific language (e.g., en, de, fr)
-- `WHISPER_API_URL`: HTTP API endpoint for transcription (default: `http://host.docker.internal:8020`)
+| Option | Description | Example |
+|--------|-------------|---------|
+| `--vault-path` | Path to Obsidian vault | `--vault-path ~/Obsidian` |
+| `--config` | Configuration file path | `--config my-config.yaml` |
+| `--concurrency-limit` | Max concurrent tasks | `--concurrency-limit 10` |
+| `--timeout` | Processing timeout (seconds) | `--timeout 300` |
+| `--retry-attempts` | Number of retry attempts | `--retry-attempts 3` |
+| `--exclude-pattern` | Exclusion pattern (repeatable) | `--exclude-pattern "archive/**"` |
+| `--log-level` | Logging level | `--log-level DEBUG` |
+| `--dry-run` | Show processing plan | `--dry-run` |
+| `--validate` | Validate configuration | `--validate` |
+| `--generate-config` | Generate default config | `--generate-config` |
 
 ## Development
 
-### Project Structure
-
-```
-obsidian-postprocessor/
-├── src/
-│   ├── config.py                 # Configuration management
-│   ├── voice_memo_detector.py    # Voice memo detection
-│   ├── state_manager.py          # Stateless state management
-│   ├── runner.py                 # Script execution
-│   └── processor.py              # Main processor class
-├── processor/
-│   └── add_transcript_to_voicememo.py  # Your post-processing script
-├── testvault/                    # Test vault
-├── tests/                        # Test suite
-├── main.py                       # Entry point
-├── requirements.txt              # Dependencies
-├── Dockerfile                    # Container definition
-├── .pre-commit-config.yaml       # Pre-commit hooks configuration
-└── .flake8                       # Linting configuration
-```
-
-### Development Setup
-
-1. **Clone and setup environment:**
-   ```bash
-   git clone <repository-url>
-   cd obsidian-postprocessor
-   python -m venv venv
-   source venv/bin/activate  # Linux/Mac
-   # or venv\Scripts\activate  # Windows
-   pip install -r requirements.txt
-   ```
-
-2. **Install development tools:**
-   ```bash
-   pip install pre-commit pytest coverage
-   pre-commit install
-   ```
-
-3. **Run development commands:**
-   ```bash
-   # Run tests
-   ./venv/bin/python -m pytest tests/
-
-   # Run tests with coverage
-   ./venv/bin/python -m pytest tests/ --cov=src/
-
-   # Run linting
-   ./venv/bin/python -m flake8 src/ tests/ main.py
-
-   # Auto-format code
-   ./venv/bin/python -m black src/ tests/ main.py
-
-   # Sort imports
-   ./venv/bin/python -m isort src/ tests/ main.py
-
-   # Check CI pipeline status
-   ./check_pipeline.sh
-   ```
-
-### Pre-commit Hooks
-
-The project uses pre-commit hooks to ensure code quality:
-
-- **Black**: Automatic code formatting (120 char line length)
-- **isort**: Import sorting
-- **flake8**: Linting with project configuration
-- **Basic checks**: Trailing whitespace, YAML validation, large files
-- **pytest**: Fast test execution with fail-fast
+### Environment Setup
 
 ```bash
-# Run pre-commit on all files
-pre-commit run --all-files
+# Install development dependencies
+pip install -r requirements.txt
 
-# Run specific hook
-pre-commit run black
-pre-commit run flake8
+# Setup pre-commit hooks
+pre-commit install
+
+# Run tests
+python -m pytest tests/
+
+# Run with coverage
+python -m pytest tests/ --cov=main --cov-report=html
 ```
 
-### Code Quality Standards
-
-- **Line length**: 120 characters (relaxed from default 79)
-- **Import sorting**: isort with black profile
-- **Type hints**: Encouraged for new code
-- **Testing**: Comprehensive test coverage required
-- **Documentation**: Docstrings for public methods
-
-### Testing Strategy
+### Development Commands
 
 ```bash
-# Run all tests
-./venv/bin/python -m pytest tests/
+# Linting
+flake8 main.py tests/
+black --check main.py tests/
+isort --check-only main.py tests/
 
-# Run with coverage report
-./venv/bin/python -m pytest tests/ --cov=src/ --cov-report=html
+# Testing
+python -m pytest tests/ -v
+python -m pytest tests/ --cov=main
 
-# Run specific test file
-./venv/bin/python -m pytest tests/test_voice_memo_detector.py
-
-# Run with verbose output
-./venv/bin/python -m pytest tests/ -v
-
-# Run single test function
-./venv/bin/python -m pytest tests/test_config.py::TestConfig::test_default_config
+# Dry run on test data
+python main.py --vault-path tests/fixtures/test_vault --dry-run
 ```
 
-### Continuous Integration
+## Architecture
 
-The project uses GitHub Actions for CI/CD:
+### V2 Design Principles
 
-- **Multi-platform testing**: Ubuntu, Windows, macOS
-- **Python version matrix**: 3.9, 3.10, 3.11, 3.12, 3.13
-- **Code quality**: Linting, formatting, security scanning
-- **Docker publishing**: Automatic container builds and registry publishing
-- **Integration testing**: End-to-end workflow validation
+1. **Minimal Dependencies**: Only essential dependencies for maximum reliability
+2. **Configuration-Driven**: All behavior controlled via YAML configuration
+3. **Async-First**: Built for concurrent processing from the ground up
+4. **Plugin-Based**: Extensible processor system for different processing types
+5. **Robust Error Handling**: Graceful handling of template syntax and malformed data
 
-Check pipeline status: `./check_pipeline.sh`
+### Current Implementation Status
 
-### Docker Development
+✅ **Complete - Ready to Use:**
+- CLI with full configuration support
+- Command-line override hierarchy
+- Configuration validation with bounds checking
+- Environment variable interpolation
+- Dry-run with actual vault scanning
+- Comprehensive test suite (56 tests, 81% coverage)
 
-```bash
-# Build development image
-docker build -t obsidian-postprocessor:dev .
+⚠️ **Core Implementation Needed:**
+- `obsidian_processor/config.py` - Configuration loading system
+- `obsidian_processor/scanner.py` - Async vault scanning
+- `obsidian_processor/parser.py` - Template-safe frontmatter parsing
+- `obsidian_processor/processors.py` - Processor registry and implementations
+- `obsidian_processor/state.py` - State management
 
-# Run with local vault
-docker run -v "$PWD/testvault/test-vault:/vault" obsidian-postprocessor:dev --dry-run
+See `spec/v2.md` for complete implementation specification.
 
-# Pull published image from registry
-docker pull ghcr.io/rwese/obsidian-postprocessor:latest
-```
+## Custom Transcription Services
 
-## Requirements
+V2 supports custom transcription services. See `docs/custom-transcription-api.md` for the API specification and `examples/custom-transcription-server.py` for a complete example implementation.
 
-- Python 3.8+
-- Minimal dependencies:
-  - `pyyaml` - Configuration handling
-  - `aiofiles` - Async file operations
-  - `click` - CLI interface
-  - `pytest-asyncio` - Async testing support
+## Migration from V1
 
-### Optional Dependencies
+V2 is a complete rewrite with breaking changes:
+- Configuration format changed from environment variables to YAML
+- Frontmatter structure simplified
+- Script execution interface changed
+- Removed dependency on obsidiantools
 
-- OpenAI API key for Whisper transcription (set via `OPENAI_API_KEY` environment variable)
-- Custom processing scripts as needed
+See `DEVELOPMENT_STATUS.md` for migration guidance.
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Run the test suite
+6. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License. See LICENSE file for details.
+
+## Support
+
+- **Documentation**: See `docs/` directory
+- **Issues**: GitHub Issues
+- **Specifications**: See `spec/v2.md`
+- **Examples**: See `examples/` directory
