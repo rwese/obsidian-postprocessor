@@ -37,6 +37,7 @@ class ScriptRunner:
         note_path: Path,
         voice_file_path: Path,
         env_vars: Optional[Dict[str, str]] = None,
+        dry_run: bool = False,
     ) -> bool:
         """
         Execute the post-processing script.
@@ -45,6 +46,7 @@ class ScriptRunner:
             note_path: Path to the note file
             voice_file_path: Path to the voice file
             env_vars: Additional environment variables
+            dry_run: If True, only show what would be executed
 
         Returns:
             True if script executed successfully, False otherwise
@@ -60,6 +62,16 @@ class ScriptRunner:
 
             # Prepare environment
             env = self._prepare_environment(env_vars)
+
+            if dry_run:
+                logger.info("DRY RUN - Would execute script:")
+                logger.info(f"  Command: {' '.join(cmd)}")
+                logger.info(f"  Working directory: {self.script_path.parent}")
+                logger.info(f"  Timeout: {self.timeout} seconds")
+
+                # Show what the script would do based on analysis
+                self._show_script_preview(note_path, voice_file_path, env)
+                return True
 
             logger.info(f"Executing script: {' '.join(cmd)}")
 
@@ -121,6 +133,32 @@ class ScriptRunner:
             env.update(env_vars)
 
         return env
+
+    def _show_script_preview(self, note_path: Path, voice_file_path: Path, env: Dict[str, str]) -> None:
+        """Show what the script would do in dry run mode."""
+        logger.info("  Script actions preview:")
+
+        # Check if this is the transcription script
+        if "add_transcript_to_voicememo.py" in self.script_path.name:
+            # Get configuration from environment
+            whisper_api_url = env.get("WHISPER_API_URL", "http://host.docker.internal:8020")
+            whisper_model = env.get("WHISPER_MODEL", "small")
+            whisper_language = env.get("WHISPER_LANGUAGE", "auto-detect")
+
+            logger.info(f"    1. Check API health at: {whisper_api_url}/health")
+            logger.info(f"    2. Get available models from: {whisper_api_url}/models")
+            logger.info(f"    3. Auto-detect language from filename: {voice_file_path.name}")
+            logger.info(f"    4. Transcribe audio via POST: {whisper_api_url}/transcribe")
+            logger.info(f"       - Model: {whisper_model}")
+            logger.info(f"       - Language: {whisper_language}")
+            logger.info(f"       - Audio file: {voice_file_path.name}")
+            logger.info(f"    5. Read note content from: {note_path}")
+            logger.info(f"    6. Find voice embed: ![[{voice_file_path.name}]]")
+            logger.info("    7. Add transcript as blockquote after embed")
+            logger.info(f"    8. Write updated content back to: {note_path}")
+        else:
+            logger.info(f"    Custom script would process: {voice_file_path.name}")
+            logger.info(f"    Note file: {note_path}")
 
     def validate_script_interface(self) -> bool:
         """
