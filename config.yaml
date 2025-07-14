@@ -1,0 +1,36 @@
+vault_path: "/path/to/obsidian/vault"
+
+# Exclusion patterns (glob syntax)
+exclude_patterns:
+  - "templates/**"
+  - "archive/**"
+  - "**/*.template.md"
+  - "**/.*"  # Hidden files
+
+# Processing configuration
+processing:
+  concurrency_limit: 5
+  retry_attempts: 3
+  retry_delay: 1.0
+  timeout: 300
+
+# Processor definitions
+processors:
+  transcribe:
+    type: "whisper"
+    config:
+      api_key: "${OPENAI_API_KEY}"
+      model: "whisper-1"
+      language: "auto"
+
+  summarize:
+    type: "script"
+    config:
+      command: "python scripts/summarize.py"
+      timeout: 120
+
+# Logging configuration
+logging:
+  level: "INFO"
+  file: "logs/processor.log"
+  format: "structured"

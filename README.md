@@ -1,43 +1,75 @@
-# Obsidian Post-Processor
+# Obsidian Post-Processor V2
 
-A stateless tool for processing voice memos in Obsidian vaults. Automatically detects embedded voice recordings and executes post-processing scripts while tracking state through frontmatter.
+A minimal, async-first tool for processing voice memos in Obsidian vaults. Automatically detects embedded voice recordings and executes configurable post-processing scripts while tracking state through frontmatter.
 
 ## High-Level Concept
 
-The Obsidian Post-Processor monitors an Obsidian vault for voice memos (embedded audio files like `![[Recording.webm]]`) and executes custom post-processing scripts on them. It maintains a **stateless** design by tracking processed recordings in the frontmatter of each note, ensuring idempotent operations.
+The Obsidian Post-Processor V2 monitors an Obsidian vault for voice memos (embedded audio files like `![[Recording.m4a]]`) and executes custom post-processing scripts on them. It maintains a **stateless** design by tracking processed recordings in the frontmatter of each note, ensuring idempotent operations.
 
 ### Key Features
 
-- **Stateless Operation**: No external databases or state files
-- **Multiple Voice Memos**: Supports multiple voice recordings per note
-- **Frontmatter Tracking**: Tracks processed recordings in YAML frontmatter
-- **Configurable**: Environment variable-based configuration
-- **Docker Ready**: Containerized for easy deployment
-- **Comprehensive Logging**: Detailed logging for debugging
+- **Minimal Dependencies**: Only PyYAML, aiofiles, and click
+- **Async-First**: Built for concurrent processing from the ground up
+- **Configuration-Driven**: YAML-based configuration with flexible exclusion patterns
+- **Template-Safe**: Handles Obsidian templater syntax gracefully
+- **Plugin Architecture**: Extensible processor system for different backends
+- **Flexible Exclusions**: Glob pattern-based file and directory exclusion
+- **Robust Error Handling**: Graceful handling of malformed frontmatter and template syntax
 
 ## Architecture
 
 ```
 ┌─────────────────────┐    ┌─────────────────────┐    ┌─────────────────────┐
-│  Voice Memo         │    │  State Manager      │    │  Script Runner      │
-│  Detector           │    │                     │    │                     │
-│                     │    │  Frontmatter        │    │  Execute            │
-│  Find ![[*.webm]]   │───▶│  Tracking           │───▶│  Post-processing    │
-│  in notes           │    │                     │    │  Scripts            │
+│  Vault Scanner      │    │  Frontmatter        │    │  Processor          │
+│  (Async)            │    │  Parser             │    │  Registry           │
+│                     │    │                     │    │                     │
+│  Find ![[*.m4a]]    │───▶│  Template-Safe      │───▶│  Plugin-Based       │
+│  with exclusions    │    │  YAML Parsing       │    │  Async Processing   │
 └─────────────────────┘    └─────────────────────┘    └─────────────────────┘
 ```
 
 ## Configuration
 
-Configure via environment variables:
+Configure via YAML file (`config.yaml`):
 
-- `VAULT_PATH`: Path to Obsidian vault (default: `./testvault/test-vault`)
-- `PROCESSOR_SCRIPT_PATH`: Path to post-processing script (default: `./processor/add_transcript_to_voicememo.py`)
-- `VOICE_PATTERNS`: Voice file patterns (default: `*.webm,*.mp3,*.wav,*.m4a`)
-- `STATE_METHOD`: State tracking method (default: `frontmatter`)
-- `LOG_LEVEL`: Logging verbosity (default: `INFO`)
-- `WATCH_MODE`: Enable file monitoring (default: `false`)
-- `FRONTMATTER_ERROR_LEVEL`: Handle frontmatter parsing errors (default: `WARNING`, options: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`, `SILENT`)
+```yaml
+vault_path: "/path/to/your/obsidian/vault"
+
+# Exclusion patterns (glob syntax)
+exclude_patterns:
+  - "templates/**"
+  - "archive/**"
+  - "**/*.template.md"
+  - "**/.*"  # Hidden files
+
+# Processing configuration
+processing:
+  concurrency_limit: 5
+  retry_attempts: 3
+  retry_delay: 1.0
+  timeout: 300
+
+# Processor definitions
+processors:
+  transcribe:
+    type: "whisper"
+    config:
+      api_key: "${OPENAI_API_KEY}"
+      model: "whisper-1"
+      language: "auto"
+```
+
+### Configuration Generation
+
+Generate a default configuration file:
+
+```bash
+# Generate default config to stdout
+python main.py --generate-config
+
+# Save to file
+python main.py --generate-config > config.yaml
+```
 
 ## Usage
 
@@ -47,15 +79,66 @@ Configure via environment variables:
 # Install dependencies
 pip install -r requirements.txt
 
-# Run processor
-python main.py
+# Generate default configuration
+python main.py --generate-config > config.yaml
+
+# Edit config.yaml to set your vault path and preferences
+
+# Validate configuration
+python main.py --validate
 
 # Dry run (analyze without processing)
 python main.py --dry-run
 
-# Process specific note
-python main.py --note "Voice Memo.md"
+# Process vault
+python main.py
+
+# Use custom config file
+python main.py --config /path/to/custom-config.yaml
+
+# Set log level
+python main.py --log-level DEBUG
 ```
+
+### Command-Line Configuration Overrides
+
+All configuration options can be overridden via command-line flags:
+
+```bash
+# Override vault path
+python main.py --vault-path /path/to/vault
+
+# Override processing settings
+python main.py --concurrency-limit 10 --timeout 120 --retry-attempts 5
+
+# Add exclusion patterns
+python main.py --exclude-pattern "drafts/**" --exclude-pattern "temp/**"
+
+# Combine multiple overrides
+python main.py \
+  --config custom-config.yaml \
+  --vault-path /path/to/vault \
+  --concurrency-limit 8 \
+  --timeout 180 \
+  --exclude-pattern "archive/**" \
+  --log-level DEBUG \
+  --dry-run
+```
+
+### Available Command-Line Options
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `--config PATH` | Path | Path to configuration file |
+| `--vault-path DIRECTORY` | Path | Path to Obsidian vault (overrides config) |
+| `--concurrency-limit INTEGER` | Number | Maximum concurrent processing tasks |
+| `--timeout INTEGER` | Seconds | Processing timeout in seconds |
+| `--retry-attempts INTEGER` | Number | Number of retry attempts for failed processing |
+| `--exclude-pattern TEXT` | Pattern | Exclusion pattern (can be used multiple times) |
+| `--log-level LEVEL` | Choice | Set logging level (debug, info, warning, error) |
+| `--dry-run` | Flag | Show what would be processed without executing |
+| `--validate` | Flag | Validate configuration and exit |
+| `--generate-config` | Flag | Generate default configuration to stdout |
 
 ### Docker Usage
 
@@ -63,91 +146,90 @@ python main.py --note "Voice Memo.md"
 # Build image
 docker build -t obsidian-postprocessor .
 
-# Run container (default: process entire vault)
+# Generate default config
+docker run obsidian-postprocessor --generate-config > config.yaml
+
+# Run container with config file
 docker run -v "/path/to/your/vault:/vault" \
-  --network host \
+  -v "$PWD/config.yaml:/app/config.yaml" \
   obsidian-postprocessor
 
-# Show configuration
+# Run dry-run with command-line overrides
 docker run -v "/path/to/your/vault:/vault" \
-  --network host \
-  obsidian-postprocessor --config
+  -v "$PWD/config.yaml:/app/config.yaml" \
+  obsidian-postprocessor \
+  --vault-path /vault \
+  --concurrency-limit 8 \
+  --timeout 180 \
+  --exclude-pattern "templates/**" \
+  --log-level DEBUG \
+  --dry-run
 
-# Show vault status
+# Run without config file using only command-line options
 docker run -v "/path/to/your/vault:/vault" \
-  --network host \
-  obsidian-postprocessor --status
+  obsidian-postprocessor \
+  --vault-path /vault \
+  --concurrency-limit 5 \
+  --timeout 300 \
+  --retry-attempts 3 \
+  --exclude-pattern "templates/**" \
+  --exclude-pattern "archive/**" \
+  --log-level INFO
 
-# Run dry-run
+# Validate configuration
 docker run -v "/path/to/your/vault:/vault" \
-  --network host \
-  obsidian-postprocessor --dry-run
-
-# Process specific note
-docker run -v "/path/to/your/vault:/vault" \
-  --network host \
-  obsidian-postprocessor --note "Voice Memo"
-
-# Run with custom environment variables
-docker run -v "/path/to/your/vault:/vault" \
-  --network host \
-  -e LOG_LEVEL=DEBUG \
-  -e VOICE_PATTERNS="*.webm,*.mp3" \
-  -e FRONTMATTER_ERROR_LEVEL=SILENT \
-  -e WHISPER_MODEL=medium \
-  -e WHISPER_LANGUAGE=en \
-  -e WHISPER_API_URL=http://host.docker.internal:8020 \
-  obsidian-postprocessor --dry-run
+  obsidian-postprocessor \
+  --vault-path /vault \
+  --validate
 ```
 
-**Note**: The default API URL uses `host.docker.internal` which allows Docker containers to access services running on the host machine.
+## Template-Safe Frontmatter Handling
 
-## Frontmatter Error Handling
-
-If you see warnings like:
-```
-Front matter not populated for Default Note.md: ParserError('while parsing a flow sequence'...
-```
-
-This indicates that some notes in your vault have malformed YAML frontmatter. The tool will skip these notes and continue processing. You can control how these errors are handled:
-
-```bash
-# Suppress frontmatter parsing warnings
-FRONTMATTER_ERROR_LEVEL=SILENT python main.py
-
-# Show frontmatter errors as debug messages
-FRONTMATTER_ERROR_LEVEL=DEBUG python main.py
-
-# Docker usage with suppressed warnings
-docker run -v "/path/to/vault:/vault" \
-  -e FRONTMATTER_ERROR_LEVEL=SILENT \
-  obsidian-postprocessor
-```
-
-## State Management
-
-The tool tracks processed recordings in frontmatter:
+V2 gracefully handles Obsidian templater syntax and malformed frontmatter:
 
 ```yaml
 ---
-processed_recordings:
-  - "Recording 20250711123205.webm"
-  - "Recording 20250711124305.webm"
+title: "<%tp.date.now()%>"
+tags: [{{tag}}]
+dynamic: <%tp.system.prompt()%>
+---
+```
+
+**Template syntax is preserved**, not parsed as YAML. The processor will:
+- Skip parsing template variables like `<%tp.date.now()%>`
+- Preserve `{{variable}}` syntax
+- Handle malformed YAML gracefully
+- Continue processing other notes on errors
+
+## State Management
+
+The tool tracks processed recordings in frontmatter using the `postprocessor` section:
+
+```yaml
+---
+title: "Meeting Notes"
+postprocessor:
+  transcribe:
+    status: "completed"
+    timestamp: "2024-01-01T12:00:00Z"
+    files:
+      - "recording.m4a"
 ---
 
 Here are my voice memos:
 
-![[Recording 20250711123205.webm]]
-![[Recording 20250711124305.webm]]
+![[recording.m4a]]
 ```
 
 ## Example Workflow
 
-1. **Detection**: Scan vault for notes with `![[*.webm]]` patterns
-2. **State Check**: Check frontmatter for already processed recordings
-3. **Processing**: Execute post-processing script on new recordings
-4. **State Update**: Mark recordings as processed in frontmatter
-5. **Logging**: Log all operations for debugging
+1. **Async Vault Scanning**: Scan vault for notes with voice attachments (`![[*.m4a]]`, `![[*.mp3]]`, etc.)
+2. **Exclusion Filtering**: Skip notes matching exclusion patterns (templates, archives, etc.)
+3. **Template-Safe Parsing**: Parse frontmatter while preserving template syntax
+4. **State Check**: Check `postprocessor` section for already processed recordings
+5. **Concurrent Processing**: Execute processors on new recordings with configurable concurrency
+6. **State Update**: Mark recordings as processed in frontmatter
+7. **Error Handling**: Retry failed operations with exponential backoff
 
 ## Voice Memo Transcription
 
@@ -351,11 +433,14 @@ docker pull ghcr.io/rwese/obsidian-postprocessor:latest
 
 ## Requirements
 
-- Python 3.9+
-- Whisper HTTP API server (running at http://host.docker.internal:8020 by default)
-- obsidiantools
-- watchdog
-- pyyaml
-- requests
+- Python 3.8+
+- Minimal dependencies:
+  - `pyyaml` - Configuration handling
+  - `aiofiles` - Async file operations
+  - `click` - CLI interface
+  - `pytest-asyncio` - Async testing support
 
-The Whisper API server should be running and accessible at the configured endpoint.
+### Optional Dependencies
+
+- OpenAI API key for Whisper transcription (set via `OPENAI_API_KEY` environment variable)
+- Custom processing scripts as needed

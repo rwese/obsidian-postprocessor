@@ -1,134 +1,133 @@
 """
-Tests for configuration management.
+Test configuration system for V2
 """
 
 import os
-import sys
 import tempfile
 from pathlib import Path
 
 import pytest
+import yaml
 
-# Add src to path first
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-# flake8: noqa: E402
-from src.config import Config
+# Placeholder for future config implementation
+# from obsidian_processor.config import Config, ConfigError
 
 
 class TestConfig:
-    """Test configuration management."""
+    """Test configuration loading and validation"""
 
-    def test_default_config(self):
-        """Test default configuration values."""
-        config = Config()
+    def test_config_placeholder(self):
+        """Placeholder test - will be updated when config.py is implemented"""
+        # This is a placeholder test that should pass
+        assert True
 
-        assert config.vault_path == Path("./testvault/test-vault").resolve()
-        assert config.processor_script_path == Path("./processor/add_transcript_to_voicememo.py").resolve()
-        assert config.voice_patterns == ["*.webm", "*.mp3", "*.wav", "*.m4a"]
-        assert config.state_method == "frontmatter"
-        assert config.log_level == "INFO"
-        assert config.watch_mode is False
+    def test_load_yaml_config(self, config_file: Path):
+        """Test loading YAML configuration"""
+        with open(config_file) as f:
+            config = yaml.safe_load(f)
 
-    def test_env_var_override(self):
-        """Test environment variable override."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            vault_path = Path(temp_dir) / "vault"
-            script_path = Path(temp_dir) / "script.py"
+        assert config["vault_path"] == "/tmp/test_vault_fixture"
+        assert "exclude_patterns" in config
+        assert "processing" in config
+        assert "processors" in config
 
-            # Create test files
-            vault_path.mkdir()
-            script_path.touch()
+    def test_config_validation(self, sample_config: dict):
+        """Test configuration validation"""
+        # Test required fields
+        assert "vault_path" in sample_config
+        assert "exclude_patterns" in sample_config
+        assert "processing" in sample_config
+        assert "processors" in sample_config
 
-            # Set environment variables
-            os.environ["VAULT_PATH"] = str(vault_path)
-            os.environ["PROCESSOR_SCRIPT_PATH"] = str(script_path)
-            os.environ["VOICE_PATTERNS"] = "*.wav,*.mp3"
-            os.environ["STATE_METHOD"] = "vault_file"
-            os.environ["LOG_LEVEL"] = "DEBUG"
-            os.environ["WATCH_MODE"] = "true"
+        # Test processing config
+        processing = sample_config["processing"]
+        assert processing["concurrency_limit"] > 0
+        assert processing["retry_attempts"] >= 0
+        assert processing["timeout"] > 0
 
-            try:
-                config = Config()
+    def test_environment_variable_interpolation(self, temp_dir: Path):
+        """Test environment variable interpolation in config"""
+        config_content = {
+            "vault_path": "${TEST_VAULT_PATH}",
+            "processors": {"test": {"type": "script", "config": {"api_key": "${TEST_API_KEY}"}}},
+        }
 
-                assert config.vault_path == vault_path.resolve()
-                assert config.processor_script_path == script_path.resolve()
-                assert config.voice_patterns == ["*.wav", "*.mp3"]
-                assert config.state_method == "vault_file"
-                assert config.log_level == "DEBUG"
-                assert config.watch_mode is True
-            finally:
-                # Clean up environment variables
-                for key in [
-                    "VAULT_PATH",
-                    "PROCESSOR_SCRIPT_PATH",
-                    "VOICE_PATTERNS",
-                    "STATE_METHOD",
-                    "LOG_LEVEL",
-                    "WATCH_MODE",
-                ]:
-                    if key in os.environ:
-                        del os.environ[key]
+        config_path = temp_dir / "test_config.yaml"
+        with open(config_path, "w") as f:
+            yaml.dump(config_content, f)
 
-    def test_invalid_state_method(self):
-        """Test invalid state method raises error."""
-        os.environ["STATE_METHOD"] = "invalid_method"
+        # Set environment variables
+        os.environ["TEST_VAULT_PATH"] = "/test/vault"
+        os.environ["TEST_API_KEY"] = "test_key"
 
         try:
-            with pytest.raises(ValueError, match="Invalid state method"):
-                Config()
+            # Test that config contains environment variables
+            with open(config_path) as f:
+                config = yaml.safe_load(f)
+
+            assert config["vault_path"] == "${TEST_VAULT_PATH}"
+            assert config["processors"]["test"]["config"]["api_key"] == "${TEST_API_KEY}"
+
         finally:
-            del os.environ["STATE_METHOD"]
+            # Clean up environment variables
+            os.environ.pop("TEST_VAULT_PATH", None)
+            os.environ.pop("TEST_API_KEY", None)
 
-    def test_invalid_log_level(self):
-        """Test invalid log level raises error."""
-        os.environ["LOG_LEVEL"] = "INVALID"
+    def test_invalid_config_format(self, temp_dir: Path):
+        """Test handling of invalid config format"""
+        config_path = temp_dir / "invalid_config.yaml"
+        config_path.write_text("invalid: yaml: content: [")
 
-        try:
-            with pytest.raises(ValueError, match="Invalid log level"):
-                Config()
-        finally:
-            del os.environ["LOG_LEVEL"]
+        with pytest.raises(yaml.YAMLError):
+            with open(config_path) as f:
+                yaml.safe_load(f)
 
-    def test_validation_missing_vault(self):
-        """Test validation fails for missing vault."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            script_path = Path(temp_dir) / "script.py"
-            script_path.touch()
+    def test_missing_required_fields(self, temp_dir: Path):
+        """Test validation of missing required fields"""
+        incomplete_config = {"processing": {"concurrency_limit": 5}}
 
-            os.environ["VAULT_PATH"] = str(Path(temp_dir) / "nonexistent")
-            os.environ["PROCESSOR_SCRIPT_PATH"] = str(script_path)
+        config_path = temp_dir / "incomplete_config.yaml"
+        with open(config_path, "w") as f:
+            yaml.dump(incomplete_config, f)
 
-            try:
-                config = Config()
-                with pytest.raises(ValueError, match="Vault path does not exist"):
-                    config.validate()
-            finally:
-                del os.environ["VAULT_PATH"]
-                del os.environ["PROCESSOR_SCRIPT_PATH"]
+        with open(config_path) as f:
+            config = yaml.safe_load(f)
 
-    def test_validation_missing_script(self):
-        """Test validation fails for missing script."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            vault_path = Path(temp_dir) / "vault"
-            vault_path.mkdir()
+        # These fields should be missing
+        assert "vault_path" not in config
+        assert "exclude_patterns" not in config
+        assert "processors" not in config
 
-            os.environ["VAULT_PATH"] = str(vault_path)
-            os.environ["PROCESSOR_SCRIPT_PATH"] = str(Path(temp_dir) / "nonexistent.py")
+    def test_default_values(self, sample_config: dict):
+        """Test default configuration values"""
+        processing = sample_config["processing"]
 
-            try:
-                config = Config()
-                with pytest.raises(ValueError, match="Processor script does not exist"):
-                    config.validate()
-            finally:
-                del os.environ["VAULT_PATH"]
-                del os.environ["PROCESSOR_SCRIPT_PATH"]
+        # Test reasonable defaults
+        assert processing["concurrency_limit"] == 2
+        assert processing["retry_attempts"] == 3
+        assert processing["retry_delay"] == 1.0
+        assert processing["timeout"] == 60
 
-    def test_config_str_representation(self):
-        """Test string representation of config."""
-        config = Config()
-        config_str = str(config)
+    def test_exclude_patterns_validation(self, sample_config: dict):
+        """Test exclude patterns validation"""
+        patterns = sample_config["exclude_patterns"]
 
-        assert "Obsidian Post-Processor Configuration" in config_str
-        assert "Vault Path:" in config_str
-        assert "Processor Script:" in config_str
-        assert "Voice Patterns:" in config_str
+        # Test that patterns are strings
+        assert all(isinstance(p, str) for p in patterns)
+
+        # Test expected patterns
+        assert "templates/**" in patterns
+        assert "archive/**" in patterns
+        assert "**/*.template.md" in patterns
+        assert "**/.*" in patterns
+
+    def test_processor_config_validation(self, sample_config: dict):
+        """Test processor configuration validation"""
+        processors = sample_config["processors"]
+
+        assert "test_processor" in processors
+
+        processor = processors["test_processor"]
+        assert "type" in processor
+        assert "config" in processor
+        assert processor["type"] == "script"

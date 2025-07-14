@@ -1,1 +1,3 @@
-# Tests for Obsidian Post-Processor
+"""
+Test suite for Obsidian Post-Processor V2
+"""
