@@ -365,9 +365,14 @@ class CustomApiProcessor(BaseProcessor):
         self.language = config.get("language", "auto")
         self.temperature = config.get("temperature", 0.0)
         self.prompt = config.get("prompt")
+        self.state_manager = None  # Will be set by orchestration layer
 
         if not self.api_url:
             raise ValueError("api_url is required for CustomApi processor")
+
+    def set_state_manager(self, state_manager):
+        """Set the state manager for task persistence."""
+        self.state_manager = state_manager
 
     async def can_process(self, note_info: NoteInfo, parsed_note: ParsedNote) -> bool:
         """Check if note has audio attachments."""
@@ -387,8 +392,16 @@ class CustomApiProcessor(BaseProcessor):
         audio_file = note_info.attachments[0]
 
         try:
-            # For now, pass None as existing_task_id - this will be updated by orchestration layer
-            transcript = await self._transcribe_audio(audio_file, existing_task_id=None)
+            # Check for existing task ID first
+            existing_task_id = None
+            if self.state_manager:
+                existing_task_id = await self.state_manager.get_existing_task_id(
+                    note_info.note_path, "CustomApiProcessor"
+                )
+
+            transcript = await self._transcribe_audio(
+                audio_file, note_info.note_path, existing_task_id=existing_task_id
+            )
 
             # Insert transcription into note content
             await self._insert_transcription_into_note(note_info.note_path, audio_file, transcript)
@@ -410,7 +423,7 @@ class CustomApiProcessor(BaseProcessor):
                 error=str(e),
             )
 
-    async def _transcribe_audio(self, audio_file: Path, existing_task_id: Optional[str] = None) -> str:
+    async def _transcribe_audio(self, audio_file: Path, note_path: Path, existing_task_id: Optional[str] = None) -> str:
         """Transcribe audio file using custom API with task polling."""
 
         timeout = aiohttp.ClientTimeout(total=self.timeout)
@@ -422,6 +435,7 @@ class CustomApiProcessor(BaseProcessor):
 
             # If we have an existing task_id, resume polling instead of submitting new request
             if existing_task_id:
+                logger.info(f"Resuming polling for existing task {existing_task_id}")
                 return await self._poll_task_completion(session, existing_task_id, headers)
 
             # Read the file content for new submission
@@ -451,7 +465,12 @@ class CustomApiProcessor(BaseProcessor):
                     # Check if this is an async response with task ID (most common case)
                     if "task_id" in result or "id" in result:
                         task_id = result.get("task_id") or result.get("id")
-                        # TODO: Store task_id in frontmatter here via callback/state manager
+                        logger.info(f"Received task ID {task_id} from API, storing in frontmatter")
+                        
+                        # Store task_id in frontmatter immediately
+                        if self.state_manager:
+                            await self.state_manager.mark_task_submitted(note_path, "CustomApiProcessor", task_id)
+                        
                         return await self._poll_task_completion(session, task_id, headers)
 
                     # Fallback: Check if this is a synchronous response with immediate transcription
@@ -619,8 +638,9 @@ class CustomApiProcessor(BaseProcessor):
 class ProcessorRegistry:
     """Registry for managing voice memo processors."""
 
-    def __init__(self):
+    def __init__(self, state_manager=None):
         self.processors: Dict[str, BaseProcessor] = {}
+        self.state_manager = state_manager
         self.processor_types = {
             "whisper": WhisperProcessor,
             "script": ScriptProcessor,
@@ -639,6 +659,10 @@ class ProcessorRegistry:
 
         processor_class = self.processor_types[processor_type]
         processor = processor_class(config)
+
+        # Set state manager for processors that support it
+        if hasattr(processor, 'set_state_manager') and self.state_manager:
+            processor.set_state_manager(self.state_manager)
 
         self.register_processor(name, processor)
         return processor
@@ -713,9 +737,9 @@ class ProcessorRegistry:
                 logger.warning(f"Cleanup failed for processor {processor_name}: {e}")
 
 
-def create_processor_registry_from_config(processors_config: Dict[str, Any]) -> ProcessorRegistry:
+def create_processor_registry_from_config(processors_config: Dict[str, Any], state_manager=None) -> ProcessorRegistry:
     """Create processor registry from configuration."""
-    registry = ProcessorRegistry()
+    registry = ProcessorRegistry(state_manager=state_manager)
 
     for name, config in processors_config.items():
         if not config.get("enabled", True):

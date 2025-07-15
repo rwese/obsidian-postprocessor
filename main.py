@@ -275,8 +275,8 @@ async def run_processing(config: Dict[str, Any], dry_run: bool = False):
         parser = FrontmatterParser()
         state_manager = StateManager(dry_run=dry_run)
 
-        # Create processor registry
-        processor_registry = create_processor_registry_from_config(processors_config)
+        # Create processor registry with state manager
+        processor_registry = create_processor_registry_from_config(processors_config, state_manager)
 
         print(" Scanning vault for voice memos...")
 
