@@ -6,11 +6,11 @@ import time
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import yaml
 
-from .parser import FrontmatterParser, ParsedNote
+from .parser import FrontmatterParser
 from .processors import ProcessResult
 
 logger = logging.getLogger(__name__)
@@ -170,7 +170,7 @@ class StateManager:
     async def mark_processing_start(self, note_path: Path, processor_name: str):
         """Mark processor as starting."""
         state = ProcessingState(
-            status=ProcessingStatus.PROCESSING, timestamp=time.time(), message=f"Processing started"
+            status=ProcessingStatus.PROCESSING, timestamp=time.time(), message="Processing started"
         )
         await self.update_processing_state(note_path, processor_name, state)
 

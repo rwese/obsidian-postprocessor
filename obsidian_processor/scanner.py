@@ -6,7 +6,7 @@ import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import AsyncGenerator, List, Optional, Set
+from typing import AsyncGenerator, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -191,7 +191,8 @@ class VaultScanner:
                     continue
 
         logger.warning(
-            f"Could not resolve attachment: {attachment_path} (tried {len(candidates)} candidates and searched {len(search_dirs)} directories)"
+            f"Could not resolve attachment: {attachment_path} "
+            f"(tried {len(candidates)} candidates and searched {len(search_dirs)} directories)"
         )
         return None
 
