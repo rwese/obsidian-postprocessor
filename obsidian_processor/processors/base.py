@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import aiohttp
+
 from ..parser import ParsedNote
 from ..scanner import NoteInfo
 
@@ -172,9 +174,6 @@ class WhisperProcessor(BaseProcessor):
 
     async def _transcribe_custom_api(self, audio_file: Path) -> str:
         """Transcribe using custom async API."""
-        import asyncio
-
-        import aiohttp
 
         # Remove /v1 suffix from base_url for custom API
         api_url = self.base_url.rstrip("/v1")
@@ -411,8 +410,7 @@ class CustomApiProcessor(BaseProcessor):
             )
 
     async def _transcribe_audio(self, audio_file: Path) -> str:
-        """Transcribe audio file using custom API."""
-        import aiohttp
+        """Transcribe audio file using custom API with task polling."""
 
         timeout = aiohttp.ClientTimeout(total=self.timeout)
 
@@ -441,17 +439,122 @@ class CustomApiProcessor(BaseProcessor):
             if self.api_key:
                 headers["Authorization"] = f"Bearer {self.api_key}"
 
-            # Make request
+            # Submit transcription request
             async with session.post(self.api_url, data=data, headers=headers) as response:
                 if response.status == 200:
                     result = await response.json()
-                    if result.get("status") == "success":
+                    
+                    # Check if this is a synchronous response with immediate transcription
+                    if result.get("status") == "success" and "transcription" in result:
                         return result["transcription"]
+                    
+                    # Check if this is an async response with task ID
+                    elif "task_id" in result or "id" in result:
+                        task_id = result.get("task_id") or result.get("id")
+                        return await self._poll_task_completion(session, task_id, headers)
+                    
                     else:
-                        raise Exception(f"API returned error: {result.get('error', 'Unknown error')}")
+                        raise Exception(f"Unexpected API response format: {result}")
                 else:
                     error_text = await response.text()
                     raise Exception(f"HTTP {response.status}: {error_text}")
+
+    async def _poll_task_completion(self, session: aiohttp.ClientSession, task_id: str, headers: dict) -> str:
+        """Poll task status until completion and return transcription."""
+        from urllib.parse import urlparse
+
+        # Parse base URL from api_url
+        parsed = urlparse(self.api_url)
+        base_url = f"{parsed.scheme}://{parsed.netloc}"
+        
+        # Common status endpoints to try
+        status_endpoints = [
+            f"{base_url}/task/{task_id}",
+            f"{base_url}/tasks/{task_id}",
+            f"{base_url}/status/{task_id}",
+        ]
+
+        start_time = time.time()
+        poll_interval = 2.0  # Start with 2 second intervals
+        max_interval = 10.0  # Cap at 10 seconds
+
+        while time.time() - start_time < self.timeout:
+            # Try different status endpoint patterns
+            for status_url in status_endpoints:
+                try:
+                    async with session.get(status_url, headers=headers) as response:
+                        if response.status == 200:
+                            status_data = await response.json()
+                            
+                            # Check various status field names
+                            status = (status_data.get("status") or 
+                                    status_data.get("state") or 
+                                    status_data.get("task_status"))
+                            
+                            if status in ["completed", "success", "done"]:
+                                # Try to get transcription from status response first
+                                transcription = (status_data.get("transcription") or 
+                                               status_data.get("result") or 
+                                               status_data.get("text"))
+                                
+                                if transcription:
+                                    return transcription
+                                
+                                # Otherwise try result endpoints
+                                return await self._get_task_result(session, task_id, headers, base_url)
+                            
+                            elif status in ["failed", "error"]:
+                                error_msg = (status_data.get("error") or 
+                                           status_data.get("error_message") or 
+                                           status_data.get("message") or 
+                                           "Task failed")
+                                raise Exception(f"Transcription failed: {error_msg}")
+                            
+                            elif status in ["pending", "running", "processing", "queued"]:
+                                # Task still processing, continue polling
+                                break
+                                
+                            # If we get here, we found a valid endpoint, break out of endpoint loop
+                            break
+                            
+                except aiohttp.ClientError:
+                    # Try next endpoint
+                    continue
+            
+            # Wait before next poll with exponential backoff
+            await asyncio.sleep(poll_interval)
+            poll_interval = min(poll_interval * 1.2, max_interval)
+
+        raise Exception(f"Transcription timed out after {self.timeout} seconds")
+
+    async def _get_task_result(self, session: aiohttp.ClientSession, task_id: str, headers: dict, base_url: str) -> str:
+        """Retrieve task result from various possible endpoints."""
+        
+        result_endpoints = [
+            f"{base_url}/task/{task_id}/result",
+            f"{base_url}/tasks/{task_id}/result", 
+            f"{base_url}/result/{task_id}",
+            f"{base_url}/download/{task_id}",
+        ]
+        
+        for result_url in result_endpoints:
+            try:
+                async with session.get(result_url, headers=headers) as response:
+                    if response.status == 200:
+                        result_data = await response.json()
+                        
+                        # Try various result field names
+                        transcription = (result_data.get("transcription") or 
+                                       result_data.get("text") or 
+                                       result_data.get("result"))
+                        
+                        if transcription:
+                            return transcription
+                            
+            except aiohttp.ClientError:
+                continue
+        
+        raise Exception(f"Could not retrieve task result for task {task_id}")
 
     async def _insert_transcription_into_note(self, note_path: Path, audio_file: Path, transcript: str):
         """Insert transcription into note content as a quoted block."""
