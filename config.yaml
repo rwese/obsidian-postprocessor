@@ -1,7 +1,7 @@
 # Obsidian Post-Processor V2 Configuration
 # Save this to config.yaml and customize for your vault
 
-vault_path: "/Users/wese/Repos/obsidian-postprocessor/testvault/test-vault"
+vault_path: "/path/to/your/obsidian/vault"
 
 # Exclusion patterns (glob syntax)
 exclude_patterns:

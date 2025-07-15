@@ -3,15 +3,14 @@ Test processor system for V2
 """
 
 import asyncio
-import tempfile
 import time
 from pathlib import Path
 
 import pytest
 
 from obsidian_processor.parser import FrontmatterParser
-from obsidian_processor.processors import ProcessorRegistry, create_processor_registry_from_config
-from obsidian_processor.scanner import NoteInfo, VaultScanner
+from obsidian_processor.processors import create_processor_registry_from_config
+from obsidian_processor.scanner import VaultScanner
 from obsidian_processor.state import ProcessingStatus, StateManager
 
 
@@ -546,7 +545,6 @@ More content.
         # Initialize components
         scanner = VaultScanner(test_vault_with_audio, [])
         parser = FrontmatterParser()
-        state_manager = StateManager(dry_run=False)
         processor_registry = create_processor_registry_from_config(mock_processor_config)
 
         # Scan and process the note

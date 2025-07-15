@@ -82,11 +82,9 @@ class TestVaultScanner:
         assert len(template_files) > 0  # Should have template files
 
         # Test archive exclusion - check if any exist
-        has_archive_files = any("archive" in f.parts for f in all_md_files)
         # Archive might be empty in test vault
 
         # Test .template.md exclusion - check if any exist
-        has_template_md_files = any(f.name.endswith(".template.md") for f in all_md_files)
         # Might not have any in test vault
 
         # Regular files should not be excluded

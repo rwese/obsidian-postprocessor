@@ -159,7 +159,7 @@ logging:
     # Validate configuration values
     validation_errors = validate_config_values(effective_config)
     if validation_errors:
-        print("❌ Configuration validation errors:")
+        print("ERROR: Configuration validation errors:")
         for error in validation_errors:
             print(f"   - {error}")
         return
@@ -189,52 +189,52 @@ logging:
         # Validate vault path
         vault_validation = validate_vault_path(effective_config)
         if vault_validation:
-            print(f"❌ ERROR: {vault_validation}")
+            print(f"ERROR: ERROR: {vault_validation}")
             return
 
         # Validate processors
         processor_validation = validate_processors(effective_config)
         if processor_validation:
-            print("❌ ERROR: Processor validation failed:")
+            print("ERROR: ERROR: Processor validation failed:")
             for error in processor_validation:
                 print(f"   - {error}")
             return
 
-        print("✅ Configuration is valid")
+        print("SUCCESS: Configuration is valid")
         return
 
     if dry_run:
         vault_validation = validate_vault_path(effective_config)
         if vault_validation:
-            print(f"❌ ERROR: {vault_validation}")
+            print(f"ERROR: ERROR: {vault_validation}")
             return
 
         print("\nDry run mode:")
-        print("✅ Configuration loaded and validated")
+        print("SUCCESS: Configuration loaded and validated")
 
         # Actually scan the vault
         vault_path_obj = Path(effective_config["vault_path"])
         exclude_patterns = effective_config.get("exclude_patterns", [])
 
-        print(f"\n📁 Scanning vault: {vault_path_obj}")
+        print(f"\n Scanning vault: {vault_path_obj}")
         if exclude_patterns:
-            print(f"🚫 Exclusion patterns: {len(exclude_patterns)} patterns")
+            print(f" Exclusion patterns: {len(exclude_patterns)} patterns")
             for pattern in exclude_patterns:
                 print(f"   - {pattern}")
 
         # Scan for markdown files
         markdown_files = scan_vault_for_markdown(vault_path_obj, exclude_patterns)
-        print(f"\n📄 Found {len(markdown_files)} markdown files")
+        print(f"\n Found {len(markdown_files)} markdown files")
 
         # Parse files for voice attachments
         files_with_audio = scan_for_voice_attachments(markdown_files, vault_path_obj)
 
         if files_with_audio:
-            print(f"\n🎙️  Found {len(files_with_audio)} files with voice attachments:")
+            print(f"\n  Found {len(files_with_audio)} files with voice attachments:")
             for file_info in files_with_audio:
-                print(f"   📝 {file_info['note_path']}")
+                print(f"    {file_info['note_path']}")
                 for audio in file_info["audio_files"]:
-                    print(f"      🎵 {audio['file']} ({audio['type']})")
+                    print(f"       {audio['file']} ({audio['type']})")
 
                     # Show what would be processed
                     processors = effective_config.get("processors", {})
@@ -242,12 +242,12 @@ logging:
                         state = file_info.get("state", {}).get(proc_name, "pending")
                         print(f"         → {proc_name}: {state}")
         else:
-            print("\n✅ No voice attachments found to process")
+            print("\nSUCCESS: No voice attachments found to process")
 
         return
 
     print("\nProcessing mode:")
-    print("✅ Configuration loaded and validated")
+    print("SUCCESS: Configuration loaded and validated")
 
     # Run the actual processing
     asyncio.run(run_processing(effective_config, dry_run))
@@ -278,7 +278,7 @@ async def run_processing(config: Dict[str, Any], dry_run: bool = False):
         # Create processor registry
         processor_registry = create_processor_registry_from_config(processors_config)
 
-        print("🔄 Scanning vault for voice memos...")
+        print(" Scanning vault for voice memos...")
 
         # Scan vault
         notes_processed = 0
@@ -293,17 +293,17 @@ async def run_processing(config: Dict[str, Any], dry_run: bool = False):
             try:
                 parsed_note = await parser.parse_note(note_info.note_path)
 
-                print(f"📝 Processing: {note_info.note_path.name}")
-                print(f"   🎵 Audio files: {len(note_info.attachments)}")
+                print(f" Processing: {note_info.note_path.name}")
+                print(f"    Audio files: {len(note_info.attachments)}")
 
                 # Process with each configured processor
                 for processor_name in processor_registry.list_processors():
                     # Check if we should process this note
                     if await state_manager.should_process(note_info.note_path, processor_name):
                         if dry_run:
-                            print(f"   🔄 Would process with {processor_name}")
+                            print(f"    Would process with {processor_name}")
                         else:
-                            print(f"   🔄 Processing with {processor_name}...")
+                            print(f"    Processing with {processor_name}...")
 
                             # Mark as processing
                             await state_manager.mark_processing_start(note_info.note_path, processor_name)
@@ -317,36 +317,36 @@ async def run_processing(config: Dict[str, Any], dry_run: bool = False):
                             processing_results.append(result)
 
                             if result.success:
-                                print(f"   ✅ {processor_name}: {result.message}")
+                                print(f"   SUCCESS: {processor_name}: {result.message}")
                             else:
-                                print(f"   ❌ {processor_name}: {result.message}")
+                                print(f"   ERROR: {processor_name}: {result.message}")
                     else:
-                        print(f"   ⏭️  Skipping {processor_name} (already processed)")
+                        print(f"     Skipping {processor_name} (already processed)")
 
             except Exception as e:
                 logger.error(f"Error processing note {note_info.note_path}: {e}")
-                print(f"   ❌ Error: {e}")
+                print(f"   ERROR: Error: {e}")
 
         # Print summary
-        print("\n📊 Processing Summary:")
-        print(f"   📄 Notes scanned: {notes_processed}")
-        print(f"   🎵 Notes with audio: {notes_with_audio}")
+        print("\n Processing Summary:")
+        print(f"    Notes scanned: {notes_processed}")
+        print(f"    Notes with audio: {notes_with_audio}")
 
         if processing_results:
             successful = sum(1 for r in processing_results if r.success)
             failed = len(processing_results) - successful
-            print(f"   ✅ Successful: {successful}")
-            print(f"   ❌ Failed: {failed}")
+            print(f"   SUCCESS: Successful: {successful}")
+            print(f"   ERROR: Failed: {failed}")
 
             if failed > 0:
-                print("\n❌ Failed processing:")
+                print("\nERROR: Failed processing:")
                 for result in processing_results:
                     if not result.success:
                         print(f"   - {result.processor_name}: {result.message}")
 
     except Exception as e:
         logger.error(f"Processing failed: {e}")
-        print(f"❌ Processing failed: {e}")
+        print(f"ERROR: Processing failed: {e}")
         raise
 
 
