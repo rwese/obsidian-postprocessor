@@ -3,7 +3,6 @@ Test configuration system for V2
 """
 
 import os
-import tempfile
 from pathlib import Path
 
 import pytest

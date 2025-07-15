@@ -74,9 +74,6 @@ class TestVaultScanner:
         """Test exclusion pattern matching"""
         vault_path = test_vault
 
-        # Test patterns from sample config
-        exclude_patterns = ["templates/**", "archive/**", "**/*.template.md", "**/.*"]
-
         # Get all markdown files
         all_md_files = list(vault_path.rglob("*.md"))
 
@@ -84,12 +81,12 @@ class TestVaultScanner:
         template_files = [f for f in all_md_files if "templates" in f.parts]
         assert len(template_files) > 0  # Should have template files
 
-        # Test archive exclusion
-        archive_files = [f for f in all_md_files if "archive" in f.parts]
+        # Test archive exclusion - check if any exist
+        has_archive_files = any("archive" in f.parts for f in all_md_files)
         # Archive might be empty in test vault
 
-        # Test .template.md exclusion
-        template_md_files = [f for f in all_md_files if f.name.endswith(".template.md")]
+        # Test .template.md exclusion - check if any exist
+        has_template_md_files = any(f.name.endswith(".template.md") for f in all_md_files)
         # Might not have any in test vault
 
         # Regular files should not be excluded

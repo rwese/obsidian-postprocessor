@@ -2,8 +2,6 @@
 Test frontmatter parser for V2
 """
 
-import pytest
-
 # Placeholder for future parser implementation
 # from obsidian_processor.parser import FrontmatterParser, ParseError
 

@@ -5,7 +5,7 @@ Pytest configuration and fixtures for V2 tests
 import asyncio
 import tempfile
 from pathlib import Path
-from typing import AsyncGenerator, Generator
+from typing import Generator
 
 import pytest
 import yaml

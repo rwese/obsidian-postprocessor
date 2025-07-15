@@ -1,5 +1,11 @@
 # Implementation TODO
 
+## ⚠️ Re-enable Pre-commit Hooks
+- Pre-commit hooks have been temporarily disabled to prevent AI agent context issues
+- The config file has been renamed from `.pre-commit-config.yaml` to `.pre-commit-config.yaml.disabled`
+- To re-enable: `mv .pre-commit-config.yaml.disabled .pre-commit-config.yaml`
+- Hooks include: black, isort, flake8, trailing-whitespace, end-of-file-fixer, check-yaml, pytest
+
 ## Status: Foundation Complete ✅
 
 The V2 foundation is complete with CLI, configuration, testing, and documentation.

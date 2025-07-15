@@ -4,7 +4,6 @@ Test the main CLI interface
 
 from pathlib import Path
 
-import pytest
 from click.testing import CliRunner
 
 from main import main
@@ -41,7 +40,7 @@ def test_main_processing_mode(config_file: Path):
     result = runner.invoke(main, ["--config", str(config_file)])
     assert result.exit_code == 0
     assert "Processing mode:" in result.output
-    assert "Core implementation needed:" in result.output
+    assert "Configuration loaded and validated" in result.output
 
 
 def test_main_log_level():
@@ -62,8 +61,8 @@ def test_main_missing_config():
     """Test missing config file"""
     runner = CliRunner()
     result = runner.invoke(main, ["--config", "nonexistent.yaml"])
-    # Should succeed without --generate-config since config check is later
-    assert result.exit_code == 0
+    # Should fail with missing config file
+    assert result.exit_code == 1
 
 
 def test_main_generate_config():

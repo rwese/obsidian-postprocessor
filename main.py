@@ -14,6 +14,11 @@ from typing import Any, Dict, List, Optional
 import click
 import yaml
 
+from obsidian_processor.parser import FrontmatterParser
+from obsidian_processor.processors import create_processor_registry_from_config
+from obsidian_processor.scanner import VaultScanner
+from obsidian_processor.state import StateManager
+
 
 @click.command()
 @click.option(
@@ -159,7 +164,7 @@ logging:
             print(f"   - {error}")
         return
 
-    print(f"Obsidian Post-Processor V2 - Configuration loaded")
+    print("Obsidian Post-Processor V2 - Configuration loaded")
     print(f"Config file: {config}")
     print(f"Vault path: {effective_config.get('vault_path', 'NOT SET')}")
     print(f"Log level: {effective_config.get('logging', {}).get('level', 'INFO')}")
@@ -175,7 +180,7 @@ logging:
         if isinstance(patterns, list):
             print(f"Exclude patterns: {len(patterns)} patterns")
         else:
-            print(f"Exclude patterns: 1 pattern (converted from string)")
+            print("Exclude patterns: 1 pattern (converted from string)")
             effective_config["exclude_patterns"] = [str(patterns)]
 
     if validate:
@@ -243,16 +248,106 @@ logging:
 
     print("\nProcessing mode:")
     print("✅ Configuration loaded and validated")
-    print("🔄 Would load processors")
-    print("🔄 Would scan vault asynchronously")
-    print("🔄 Would process voice memos")
-    print("\n⚠️  Core implementation needed:")
-    print("   - obsidian_processor/config.py")
-    print("   - obsidian_processor/scanner.py")
-    print("   - obsidian_processor/parser.py")
-    print("   - obsidian_processor/processors.py")
-    print("   - obsidian_processor/state.py")
-    print("   See spec/v2.md for complete implementation plan")
+
+    # Run the actual processing
+    asyncio.run(run_processing(effective_config, dry_run))
+
+
+async def run_processing(config: Dict[str, Any], dry_run: bool = False):
+    """Run the actual processing using the new implementation."""
+    import logging
+
+    # Set up logging
+    log_level = config.get("logging", {}).get("level", "INFO")
+    logging.basicConfig(
+        level=getattr(logging, log_level.upper()), format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    logger = logging.getLogger(__name__)
+
+    try:
+        # Load configuration using new system
+        vault_path = Path(config["vault_path"])
+        exclude_patterns = config.get("exclude_patterns", [])
+        processors_config = config.get("processors", {})
+
+        # Initialize components
+        scanner = VaultScanner(vault_path, exclude_patterns)
+        parser = FrontmatterParser()
+        state_manager = StateManager(dry_run=dry_run)
+
+        # Create processor registry
+        processor_registry = create_processor_registry_from_config(processors_config)
+
+        print("🔄 Scanning vault for voice memos...")
+
+        # Scan vault
+        notes_processed = 0
+        notes_with_audio = 0
+        processing_results = []
+
+        async for note_info in scanner.scan_vault():
+            notes_processed += 1
+            notes_with_audio += 1
+
+            # Parse the note
+            try:
+                parsed_note = await parser.parse_note(note_info.note_path)
+
+                print(f"📝 Processing: {note_info.note_path.name}")
+                print(f"   🎵 Audio files: {len(note_info.attachments)}")
+
+                # Process with each configured processor
+                for processor_name in processor_registry.list_processors():
+                    # Check if we should process this note
+                    if await state_manager.should_process(note_info.note_path, processor_name):
+                        if dry_run:
+                            print(f"   🔄 Would process with {processor_name}")
+                        else:
+                            print(f"   🔄 Processing with {processor_name}...")
+
+                            # Mark as processing
+                            await state_manager.mark_processing_start(note_info.note_path, processor_name)
+
+                            # Process the note
+                            result = await processor_registry.process_note(processor_name, note_info, parsed_note)
+
+                            # Update state
+                            await state_manager.mark_processing_complete(note_info.note_path, processor_name, result)
+
+                            processing_results.append(result)
+
+                            if result.success:
+                                print(f"   ✅ {processor_name}: {result.message}")
+                            else:
+                                print(f"   ❌ {processor_name}: {result.message}")
+                    else:
+                        print(f"   ⏭️  Skipping {processor_name} (already processed)")
+
+            except Exception as e:
+                logger.error(f"Error processing note {note_info.note_path}: {e}")
+                print(f"   ❌ Error: {e}")
+
+        # Print summary
+        print("\n📊 Processing Summary:")
+        print(f"   📄 Notes scanned: {notes_processed}")
+        print(f"   🎵 Notes with audio: {notes_with_audio}")
+
+        if processing_results:
+            successful = sum(1 for r in processing_results if r.success)
+            failed = len(processing_results) - successful
+            print(f"   ✅ Successful: {successful}")
+            print(f"   ❌ Failed: {failed}")
+
+            if failed > 0:
+                print("\n❌ Failed processing:")
+                for result in processing_results:
+                    if not result.success:
+                        print(f"   - {result.processor_name}: {result.message}")
+
+    except Exception as e:
+        logger.error(f"Processing failed: {e}")
+        print(f"❌ Processing failed: {e}")
+        raise
 
 
 def interpolate_env_vars(content: str) -> str:
@@ -366,7 +461,6 @@ def scan_for_voice_attachments(markdown_files: List[Path], vault_path: Path) -> 
     files_with_audio = []
 
     # Common audio file extensions
-    audio_extensions = {".mp3", ".wav", ".m4a", ".ogg", ".flac", ".aac", ".opus", ".webm"}
 
     for md_file in markdown_files:
         try:
@@ -389,7 +483,7 @@ def scan_for_voice_attachments(markdown_files: List[Path], vault_path: Path) -> 
                         main_content = parts[2]
                     else:
                         main_content = content
-                except:
+                except Exception:
                     main_content = content
             else:
                 main_content = content
@@ -422,7 +516,7 @@ def scan_for_voice_attachments(markdown_files: List[Path], vault_path: Path) -> 
                     }
                 )
 
-        except Exception as e:
+        except Exception:
             # Skip files that can't be read
             continue
 

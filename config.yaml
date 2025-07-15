@@ -1,7 +1,11 @@
-vault_path: "/path/to/obsidian/vault"
+# Obsidian Post-Processor V2 Configuration
+# Save this to config.yaml and customize for your vault
+
+vault_path: "/path/to/your/obsidian/vault"
 
 # Exclusion patterns (glob syntax)
 exclude_patterns:
+  - "**/*.sync-conflict*"
   - "templates/**"
   - "archive/**"
   - "**/*.template.md"
@@ -9,7 +13,7 @@ exclude_patterns:
 
 # Processing configuration
 processing:
-  concurrency_limit: 5
+  concurrency_limit: 1
   retry_attempts: 3
   retry_delay: 1.0
   timeout: 300
@@ -23,11 +27,12 @@ processors:
       model: "whisper-1"
       language: "auto"
 
-  summarize:
-    type: "script"
-    config:
-      command: "python scripts/summarize.py"
-      timeout: 120
+  # Example custom script processor
+  # custom_script:
+  #   type: "script"
+  #   config:
+  #     command: "python scripts/custom.py {audio_file} {note_file}"
+  #     timeout: 120
 
 # Logging configuration
 logging:

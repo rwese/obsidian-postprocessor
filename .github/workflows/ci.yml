@@ -115,16 +115,16 @@ jobs:
     - name: Run comprehensive linting
       run: |
         echo "=== Running flake8 ==="
-        flake8 src/ tests/ main.py
+        flake8 obsidian_processor/ tests/ main.py
 
         echo "=== Running black (check only) ==="
-        black --check --line-length=120 src/ tests/ main.py
+        black --check --line-length=120 obsidian_processor/ tests/ main.py
 
         echo "=== Running isort (check only) ==="
-        isort --check-only --profile=black --line-length=120 src/ tests/ main.py
+        isort --check-only --profile=black --line-length=120 obsidian_processor/ tests/ main.py
 
         echo "=== Running mypy ==="
-        mypy src/ --ignore-missing-imports || echo "mypy completed with warnings"
+        mypy obsidian_processor/ --ignore-missing-imports || echo "mypy completed with warnings"
 
   security:
     runs-on: ubuntu-latest
@@ -144,8 +144,8 @@ jobs:
 
     - name: Run bandit security scan
       run: |
-        bandit -r src/ -f json -o bandit-report.json || true
-        bandit -r src/ || echo "Bandit scan completed with findings"
+        bandit -r obsidian_processor/ -f json -o bandit-report.json || true
+        bandit -r obsidian_processor/ || echo "Bandit scan completed with findings"
 
     - name: Check for known security vulnerabilities
       run: |
@@ -188,12 +188,12 @@ jobs:
         python -c "
         import sys
         from pathlib import Path
-        sys.path.insert(0, str(Path('src')))
-        from src.config import Config
-        from src.processor import ObsidianProcessor
-        from src.voice_memo_detector import VoiceMemoDetector
-        from src.state_manager import StatelessStateManager
-        from src.runner import ScriptRunner
+        sys.path.insert(0, str(Path('obsidian_processor')))
+        from obsidian_processor.config import Config
+        from obsidian_processor.processor import ObsidianProcessor
+        from obsidian_processor.scanner import VaultScanner
+        from obsidian_processor.state import StateManager
+        from obsidian_processor.parser import FrontmatterParser
         print('All modules imported successfully on ${{ matrix.os }}')
         "
 
