@@ -387,7 +387,8 @@ class CustomApiProcessor(BaseProcessor):
         audio_file = note_info.attachments[0]
 
         try:
-            transcript = await self._transcribe_audio(audio_file)
+            # For now, pass None as existing_task_id - this will be updated by orchestration layer
+            transcript = await self._transcribe_audio(audio_file, existing_task_id=None)
 
             # Insert transcription into note content
             await self._insert_transcription_into_note(note_info.note_path, audio_file, transcript)
@@ -409,16 +410,24 @@ class CustomApiProcessor(BaseProcessor):
                 error=str(e),
             )
 
-    async def _transcribe_audio(self, audio_file: Path) -> str:
+    async def _transcribe_audio(self, audio_file: Path, existing_task_id: Optional[str] = None) -> str:
         """Transcribe audio file using custom API with task polling."""
 
         timeout = aiohttp.ClientTimeout(total=self.timeout)
 
-        # Read the file content first
-        with open(audio_file, "rb") as f:
-            audio_data = f.read()
-
         async with aiohttp.ClientSession(timeout=timeout) as session:
+            headers = {}
+            if self.api_key:
+                headers["Authorization"] = f"Bearer {self.api_key}"
+
+            # If we have an existing task_id, resume polling instead of submitting new request
+            if existing_task_id:
+                return await self._poll_task_completion(session, existing_task_id, headers)
+
+            # Read the file content for new submission
+            with open(audio_file, "rb") as f:
+                audio_data = f.read()
+
             data = aiohttp.FormData()
 
             # Add audio file data
@@ -434,24 +443,20 @@ class CustomApiProcessor(BaseProcessor):
             if self.temperature is not None:
                 data.add_field("temperature", str(self.temperature))
 
-            # Set headers
-            headers = {}
-            if self.api_key:
-                headers["Authorization"] = f"Bearer {self.api_key}"
-
             # Submit transcription request
             async with session.post(self.api_url, data=data, headers=headers) as response:
                 if response.status == 200:
                     result = await response.json()
                     
-                    # Check if this is a synchronous response with immediate transcription
-                    if result.get("status") == "success" and "transcription" in result:
-                        return result["transcription"]
-                    
-                    # Check if this is an async response with task ID
-                    elif "task_id" in result or "id" in result:
+                    # Check if this is an async response with task ID (most common case)
+                    if "task_id" in result or "id" in result:
                         task_id = result.get("task_id") or result.get("id")
+                        # TODO: Store task_id in frontmatter here via callback/state manager
                         return await self._poll_task_completion(session, task_id, headers)
+                    
+                    # Fallback: Check if this is a synchronous response with immediate transcription
+                    elif result.get("status") == "success" and "transcription" in result:
+                        return result["transcription"]
                     
                     else:
                         raise Exception(f"Unexpected API response format: {result}")

@@ -37,6 +37,7 @@ class ProcessingState:
     error: Optional[str] = None
     retry_count: int = 0
     processing_time: float = 0.0
+    task_id: Optional[str] = None
 
 
 class StateManager:
@@ -64,6 +65,7 @@ class StateManager:
                         error=state_data.get("error"),
                         retry_count=state_data.get("retry_count", 0),
                         processing_time=state_data.get("processing_time", 0.0),
+                        task_id=state_data.get("task_id"),
                     )
                 else:
                     # Handle legacy string-based state
@@ -114,6 +116,7 @@ class StateManager:
             "error": state.error,
             "retry_count": state.retry_count,
             "processing_time": state.processing_time,
+            "task_id": state.task_id,
         }
 
         # Remove None values to keep frontmatter clean
@@ -182,6 +185,7 @@ class StateManager:
             error=result.error,
             retry_count=result.retry_count,
             processing_time=result.processing_time,
+            task_id=None,  # Clear task_id when processing completes
         )
         await self.update_processing_state(note_path, processor_name, state)
 
@@ -193,6 +197,26 @@ class StateManager:
         """Mark processor as skipped."""
         state = ProcessingState(status=ProcessingStatus.SKIPPED, timestamp=time.time(), message=reason)
         await self.update_processing_state(note_path, processor_name, state)
+
+    async def mark_task_submitted(self, note_path: Path, processor_name: str, task_id: str):
+        """Mark processor as having a submitted task with task ID."""
+        state = ProcessingState(
+            status=ProcessingStatus.PROCESSING,
+            timestamp=time.time(),
+            message="Task submitted, polling for completion",
+            task_id=task_id,
+        )
+        await self.update_processing_state(note_path, processor_name, state)
+
+    async def get_existing_task_id(self, note_path: Path, processor_name: str) -> Optional[str]:
+        """Get existing task ID for a processor if one exists."""
+        states = await self.get_processing_state(note_path)
+        if processor_name in states:
+            state = states[processor_name]
+            # Only return task_id if the task is still processing
+            if state.status == ProcessingStatus.PROCESSING and state.task_id:
+                return state.task_id
+        return None
 
     async def should_process(self, note_path: Path, processor_name: str) -> bool:
         """Determine if processor should run for this note."""
