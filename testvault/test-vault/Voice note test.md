@@ -1,11 +1,4 @@
 ---
-obsidian-postprocessor:
-  version: '1.0'
-  voice-memos:
-    test.m4a:
-      model: small
-      status: processed
-      updated_at: '2025-07-14T16:14:31.673395+00:00'
 processed_recordings:
 - Recording 20250711132921.m4a
 - test.m4a
@@ -22,14 +15,13 @@ processor_state:
     status: failed
     timestamp: 1752520959.2500532
   transcribe:
-    error: 'Error code: 401 - {''error'': {''message'': ''Incorrect API key provided:
-      ${OPENAI*****KEY}. You can find your API key at https://platform.openai.com/account/api-keys.'',
-      ''type'': ''invalid_request_error'', ''param'': None, ''code'': ''invalid_api_key''}}'
-    message: Processing failed after 3 attempts
-    processing_time: 0.0
-    retry_count: 3
-    status: failed
-    timestamp: 1752520956.126482
+    message: Successfully transcribed test.m4a
+    output: Das ist ein Test eines Dictats, Punkt 1 funktioniert, Punkt 2 funktioniert
+      nicht.
+    processing_time: 50.47162580490112
+    retry_count: 0
+    status: completed
+    timestamp: 1752540760.952381
 tags:
 - voice-memo
 - test
@@ -43,5 +35,8 @@ The processor should be able to find this note even when running in different en
 
 ![[test.m4a]]
 
+
+
 > **Transcript:**
 > Das ist ein Test eines Dictats, Punkt 1 funktioniert, Punkt 2 funktioniert nicht.
+

@@ -18,14 +18,13 @@ processor_state:
     status: failed
     timestamp: 1752520937.473696
   transcribe:
-    error: 'Error code: 401 - {''error'': {''message'': ''Incorrect API key provided:
-      ${OPENAI*****KEY}. You can find your API key at https://platform.openai.com/account/api-keys.'',
-      ''type'': ''invalid_request_error'', ''param'': None, ''code'': ''invalid_api_key''}}'
+    error: 'HTTP 500: {"detail":{"status":"error","error":"Transcription process failed","code":"TRANSCRIPTION_FAILED","message":"Transcription
+      process failed"}}'
     message: Processing failed after 3 attempts
     processing_time: 0.0
     retry_count: 3
     status: failed
-    timestamp: 1752520934.3612878
+    timestamp: 1752541207.413874
 title: Broken Audio Test
 ---
 # Broken Audio Test

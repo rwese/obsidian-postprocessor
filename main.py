@@ -414,7 +414,7 @@ def validate_processors(config: Dict[str, Any]) -> List[str]:
         errors.append("No processors configured")
         return errors
 
-    valid_processor_types = ["whisper", "local", "script", "custom"]
+    valid_processor_types = ["whisper", "local", "script", "custom", "custom_api"]
 
     for proc_name, proc_config in processors.items():
         if not isinstance(proc_config, dict):

@@ -1,7 +1,7 @@
 # Obsidian Post-Processor V2 Configuration
 # Save this to config.yaml and customize for your vault
 
-vault_path: "/path/to/your/obsidian/vault"
+vault_path: "/Users/wese/Repos/obsidian-postprocessor/testvault/test-vault"
 
 # Exclusion patterns (glob syntax)
 exclude_patterns:
@@ -21,10 +21,11 @@ processing:
 # Processor definitions
 processors:
   transcribe:
-    type: "whisper"
+    type: "custom_api"
     config:
-      api_key: "${OPENAI_API_KEY}"
-      model: "whisper-1"
+      api_url: "https://whisper.nas.nope.at/transcribe"
+      timeout: 300
+      model: "medium"
       language: "auto"
 
   # Example custom script processor

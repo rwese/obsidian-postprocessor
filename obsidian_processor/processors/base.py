@@ -327,7 +327,6 @@ class ScriptProcessor(BaseProcessor):
     async def _run_script(self, audio_file: Path, note_file: Path) -> str:
         """Execute external script."""
         import os
-        import subprocess
 
         # Format command with file paths
         formatted_command = self.command.format(audio_file=str(audio_file), note_file=str(note_file))
@@ -356,6 +355,155 @@ class ScriptProcessor(BaseProcessor):
         pass
 
 
+class CustomApiProcessor(BaseProcessor):
+    """Custom API processor for external transcription services following the documented API format."""
+
+    def __init__(self, config: Dict[str, Any]):
+        super().__init__(config)
+        self.api_url = config.get("api_url")
+        self.api_key = config.get("api_key")
+        self.model = config.get("model", "whisper-base")
+        self.language = config.get("language", "auto")
+        self.temperature = config.get("temperature", 0.0)
+        self.prompt = config.get("prompt")
+
+        if not self.api_url:
+            raise ValueError("api_url is required for CustomApi processor")
+
+    async def can_process(self, note_info: NoteInfo, parsed_note: ParsedNote) -> bool:
+        """Check if note has audio attachments."""
+        return len(note_info.attachments) > 0
+
+    async def process(self, note_info: NoteInfo, parsed_note: ParsedNote) -> ProcessResult:
+        """Transcribe audio attachments using custom API."""
+        if not note_info.attachments:
+            return ProcessResult(
+                success=False,
+                processor_name="CustomApiProcessor",
+                note_path=note_info.note_path,
+                message="No audio attachments found",
+            )
+
+        # Process first attachment for now
+        audio_file = note_info.attachments[0]
+
+        try:
+            transcript = await self._transcribe_audio(audio_file)
+
+            # Insert transcription into note content
+            await self._insert_transcription_into_note(note_info.note_path, audio_file, transcript)
+
+            return ProcessResult(
+                success=True,
+                processor_name="CustomApiProcessor",
+                note_path=note_info.note_path,
+                message=f"Successfully transcribed {audio_file.name}",
+                output=transcript,
+            )
+
+        except Exception as e:
+            return ProcessResult(
+                success=False,
+                processor_name="CustomApiProcessor",
+                note_path=note_info.note_path,
+                message=f"Transcription failed: {str(e)}",
+                error=str(e),
+            )
+
+    async def _transcribe_audio(self, audio_file: Path) -> str:
+        """Transcribe audio file using custom API."""
+        import aiohttp
+
+        timeout = aiohttp.ClientTimeout(total=self.timeout)
+
+        # Read the file content first
+        with open(audio_file, 'rb') as f:
+            audio_data = f.read()
+
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            data = aiohttp.FormData()
+
+            # Add audio file data
+            data.add_field('audio', audio_data, filename=audio_file.name)
+
+            # Add optional parameters
+            if self.model:
+                data.add_field('model', self.model)
+            if self.language and self.language != "auto":
+                data.add_field('language', self.language)
+            if self.prompt:
+                data.add_field('prompt', self.prompt)
+            if self.temperature is not None:
+                data.add_field('temperature', str(self.temperature))
+
+            # Set headers
+            headers = {}
+            if self.api_key:
+                headers['Authorization'] = f"Bearer {self.api_key}"
+
+            # Make request
+            async with session.post(self.api_url, data=data, headers=headers) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    if result.get('status') == 'success':
+                        return result['transcription']
+                    else:
+                        raise Exception(f"API returned error: {result.get('error', 'Unknown error')}")
+                else:
+                    error_text = await response.text()
+                    raise Exception(f"HTTP {response.status}: {error_text}")
+
+    async def _insert_transcription_into_note(self, note_path: Path, audio_file: Path, transcript: str):
+        """Insert transcription into note content as a quoted block."""
+        import re
+
+        # Read current content
+        content = note_path.read_text(encoding="utf-8")
+
+        # Find the audio attachment reference
+        audio_filename = audio_file.name
+        patterns = [
+            rf"!\[\[{re.escape(audio_filename)}\]\]",  # Obsidian wiki link
+            rf"!\[.*?\]\([^\)]*{re.escape(audio_filename)}[^\)]*\)",  # Markdown link
+        ]
+
+        # Look for existing transcription block after the audio file
+        transcription_pattern = r"(> \*\*Transcript:\*\*[\s\S]*?)(?=\n\n|\n!\[|\n#|$)"
+
+        # Create new transcription block
+        transcription_block = f"\n\n> **Transcript:**\n> {transcript}\n"
+
+        # Find the audio reference and handle transcription
+        for pattern in patterns:
+            matches = list(re.finditer(pattern, content, re.IGNORECASE))
+            if matches:
+                # Use the first match
+                match = matches[0]
+                match_end = match.end()
+
+                # Check if there's already a transcription block after this audio file
+                remaining_content = content[match_end:]
+                existing_transcription = re.search(transcription_pattern, remaining_content)
+
+                if existing_transcription:
+                    # Replace existing transcription
+                    start_pos = match_end + existing_transcription.start()
+                    end_pos = match_end + existing_transcription.end()
+                    content = content[:start_pos] + transcription_block + content[end_pos:]
+                else:
+                    # Insert new transcription block after the audio file
+                    content = content[:match_end] + transcription_block + content[match_end:]
+
+                break
+
+        # Write updated content
+        note_path.write_text(content, encoding="utf-8")
+
+    async def cleanup(self, note_info: NoteInfo, parsed_note: ParsedNote):
+        """No cleanup needed for CustomApi processor."""
+        pass
+
+
 class ProcessorRegistry:
     """Registry for managing voice memo processors."""
 
@@ -364,6 +512,7 @@ class ProcessorRegistry:
         self.processor_types = {
             "whisper": WhisperProcessor,
             "script": ScriptProcessor,
+            "custom_api": CustomApiProcessor,
         }
 
     def register_processor(self, name: str, processor: BaseProcessor):

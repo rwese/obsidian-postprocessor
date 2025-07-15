@@ -21,14 +21,11 @@ processor_state:
     status: failed
     timestamp: 1752520944.72251
   transcribe:
-    error: 'Error code: 401 - {''error'': {''message'': ''Incorrect API key provided:
-      ${OPENAI*****KEY}. You can find your API key at https://platform.openai.com/account/api-keys.'',
-      ''type'': ''invalid_request_error'', ''param'': None, ''code'': ''invalid_api_key''}}'
-    message: Processing failed after 3 attempts
+    message: Processing started
     processing_time: 0.0
-    retry_count: 3
-    status: failed
-    timestamp: 1752520941.599506
+    retry_count: 0
+    status: processing
+    timestamp: 1752540474.776692
 title: Another Voice Memo
 ---
 Here is another voice memo:

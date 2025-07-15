@@ -21,14 +21,11 @@ processor_state:
     status: failed
     timestamp: 1752520967.559395
   transcribe:
-    error: 'Error code: 401 - {''error'': {''message'': ''Incorrect API key provided:
-      ${OPENAI*****KEY}. You can find your API key at https://platform.openai.com/account/api-keys.'',
-      ''type'': ''invalid_request_error'', ''param'': None, ''code'': ''invalid_api_key''}}'
-    message: Processing failed after 3 attempts
+    message: Processing started
     processing_time: 0.0
-    retry_count: 3
-    status: failed
-    timestamp: 1752520964.436546
+    retry_count: 0
+    status: processing
+    timestamp: 1752540760.966521
 title: Voice Memo in Notes Folder
 ---
 This is a voice memo in the Notes subfolder.

@@ -4,6 +4,7 @@ Processor plugins for Obsidian Post-Processor V2
 
 from .base import (
     BaseProcessor,
+    CustomApiProcessor,
     ProcessingError,
     ProcessorRegistry,
     ProcessResult,
@@ -18,6 +19,7 @@ __all__ = [
     "ProcessingError",
     "WhisperProcessor",
     "ScriptProcessor",
+    "CustomApiProcessor",
     "ProcessorRegistry",
     "create_processor_registry_from_config",
 ]
