@@ -143,8 +143,7 @@ logging:
     else:
         # Pass explicit config if provided (even if it doesn't exist for error handling)
         config_file_path = ConfigLoader.find_config_file(
-            config_path=config if config else None,
-            vault_path=search_vault_path
+            config_path=config if config else None, vault_path=search_vault_path
         )
         if config_file_path:
             # Determine config source for user feedback

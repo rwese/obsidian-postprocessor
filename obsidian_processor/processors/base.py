@@ -460,8 +460,8 @@ class CustomApiProcessor(BaseProcessor):
 
             # Use async endpoint according to API docs
             async_endpoint = self.api_url
-            if not async_endpoint.endswith('/async'):
-                async_endpoint = async_endpoint.rstrip('/') + '/async'
+            if not async_endpoint.endswith("/async"):
+                async_endpoint = async_endpoint.rstrip("/") + "/async"
 
             logger.info(f"Submitting to async endpoint: {async_endpoint}")
 
@@ -647,7 +647,7 @@ class ProcessorRegistry:
         processor = processor_class(config)
 
         # Set state manager for processors that support it
-        if hasattr(processor, 'set_state_manager') and self.state_manager:
+        if hasattr(processor, "set_state_manager") and self.state_manager:
             processor.set_state_manager(self.state_manager)
 
         self.register_processor(name, processor)
