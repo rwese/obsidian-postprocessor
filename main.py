@@ -23,7 +23,6 @@ from obsidian_processor.state import StateManager
 @click.command()
 @click.option(
     "--config",
-    default="config.yaml",
     help="Path to configuration file",
     type=click.Path(path_type=Path),
 )
@@ -125,17 +124,54 @@ logging:
     # Build effective configuration from file + CLI overrides
     effective_config = {}
 
-    # Load config file if it exists
-    if config.exists():
+    # Load config file with automatic discovery
+    from obsidian_processor.config import ConfigLoader
+
+    # Determine vault path for config search (CLI override takes priority)
+    search_vault_path = None
+    if vault_path:
+        search_vault_path = Path(vault_path).expanduser().resolve()
+    elif effective_config.get("vault_path"):
+        search_vault_path = Path(effective_config["vault_path"]).expanduser().resolve()
+
+    # Find and load config file
+    # If explicit config provided and exists, use it; otherwise search
+    if config and config.exists():
+        config_file_path = config
+        config_source = "explicit"
+        print(f"Using explicit configuration file: {config}")
+    else:
+        # Pass explicit config if provided (even if it doesn't exist for error handling)
+        config_file_path = ConfigLoader.find_config_file(
+            config_path=config if config else None,
+            vault_path=search_vault_path
+        )
+        if config_file_path:
+            # Determine config source for user feedback
+            if config_file_path.name == "obsidian-postprocessor.yaml" and ".obsidian" in str(config_file_path):
+                config_source = "vault-specific (.obsidian)"
+            elif config_file_path.name == "config.yaml":
+                config_source = "default (config.yaml)"
+            else:
+                config_source = "discovered"
+        else:
+            config_source = "none"
+
+    if config_file_path:
         try:
-            with open(config) as f:
+            with open(config_file_path) as f:
                 config_content = f.read()
                 # Interpolate environment variables
                 config_content = interpolate_env_vars(config_content)
                 effective_config = yaml.safe_load(config_content) or {}
+            print(f"Configuration source: {config_source}")
+            print(f"Configuration file: {config_file_path}")
         except Exception as e:
             print(f"Error loading config file: {e}")
             return
+    else:
+        print("Configuration source: defaults and CLI arguments only")
+        print("No configuration file found")
 
     # Apply command-line overrides
     if vault_path:
@@ -165,7 +201,6 @@ logging:
         return
 
     print("Obsidian Post-Processor V2 - Configuration loaded")
-    print(f"Config file: {config}")
     print(f"Vault path: {effective_config.get('vault_path', 'NOT SET')}")
     print(f"Log level: {effective_config.get('logging', {}).get('level', 'INFO')}")
 

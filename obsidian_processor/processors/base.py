@@ -454,17 +454,17 @@ class CustomApiProcessor(BaseProcessor):
                 data.add_field("language", self.language)
             if self.prompt:
                 data.add_field("prompt", self.prompt)
-            
+
             # Add output_format for structured response
             data.add_field("output_format", "json")
-            
+
             # Use async endpoint according to API docs
             async_endpoint = self.api_url
             if not async_endpoint.endswith('/async'):
                 async_endpoint = async_endpoint.rstrip('/') + '/async'
-            
+
             logger.info(f"Submitting to async endpoint: {async_endpoint}")
-            
+
             # Submit transcription request to async endpoint
             async with session.post(async_endpoint, data=data, headers=headers) as response:
                 if response.status == 200:
@@ -474,11 +474,11 @@ class CustomApiProcessor(BaseProcessor):
                     if "task_id" in result or "id" in result:
                         task_id = result.get("task_id") or result.get("id")
                         logger.info(f"Received task ID {task_id} from API, storing in frontmatter")
-                        
+
                         # Store task_id in frontmatter immediately
                         if self.state_manager:
                             await self.state_manager.mark_task_submitted(note_path, "CustomApiProcessor", task_id)
-                        
+
                         return await self._poll_task_completion(session, task_id, headers)
                     else:
                         raise Exception(f"CustomApiProcessor requires async response with task_id. Got: {result}")
@@ -506,7 +506,7 @@ class CustomApiProcessor(BaseProcessor):
                 async with session.get(status_endpoint, headers=headers) as response:
                     if response.status == 200:
                         status_data = await response.json()
-                        
+
                         # Check task status
                         status = status_data.get("status")
 

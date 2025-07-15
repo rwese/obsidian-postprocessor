@@ -65,6 +65,42 @@ class ConfigLoader:
     """Handles loading and validation of configuration."""
 
     @staticmethod
+    def find_config_file(config_path: Optional[Path] = None, vault_path: Optional[Path] = None) -> Optional[Path]:
+        """Find configuration file in order of priority."""
+        search_paths = []
+
+        # 1. Explicit config path (highest priority)
+        if config_path:
+            search_paths.append(("explicit", config_path))
+
+        # 2. Vault .obsidian directory (if vault_path provided)
+        if vault_path:
+            obsidian_config = vault_path / ".obsidian" / "obsidian-postprocessor.yaml"
+            search_paths.append(("vault-specific", obsidian_config))
+
+        # 3. Current directory (fallback)
+        search_paths.append(("default", Path("config.yaml")))
+
+        logger.debug("Configuration search order:")
+        for source_type, path in search_paths:
+            logger.debug(f"  {source_type}: {path}")
+
+        # Return first existing config file
+        for source_type, path in search_paths:
+            if path.exists():
+                logger.info(f"Using {source_type} configuration: {path}")
+                return path
+            else:
+                logger.debug(f"Config not found: {path}")
+                # If explicit config was requested but not found, return None immediately
+                if source_type == "explicit":
+                    logger.error(f"Explicit configuration file not found: {path}")
+                    return None
+
+        logger.warning("No configuration file found in any search location")
+        return None
+
+    @staticmethod
     def load_from_file(config_path: Path) -> Config:
         """Load configuration from YAML file."""
         try:
@@ -82,6 +118,17 @@ class ConfigLoader:
         except Exception as e:
             logger.error(f"Error loading configuration: {e}")
             raise
+
+    @staticmethod
+    def load_with_search(config_path: Optional[Path] = None, vault_path: Optional[Path] = None) -> Optional[Config]:
+        """Load configuration with automatic file discovery."""
+        found_config = ConfigLoader.find_config_file(config_path, vault_path)
+
+        if found_config:
+            return ConfigLoader.load_from_file(found_config)
+
+        logger.warning("No configuration file found in search paths")
+        return None
 
     @staticmethod
     def _parse_config(data: Dict[str, Any]) -> Config:

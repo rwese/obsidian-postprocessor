@@ -1,0 +1,34 @@
+# Obsidian Post-Processor Configuration
+# Stored in .obsidian directory for vault-specific settings
+
+vault_path: "/Users/wese/Repos/obsidian-postprocessor/testvault/test-vault"
+
+# Exclusion patterns (glob syntax)
+exclude_patterns:
+  - "**/*.sync-conflict*"
+  - "templates/**"
+  - "archive/**"
+  - "**/*.template.md"
+  - "**/.*"  # Hidden files
+
+# Processing configuration
+processing:
+  concurrency_limit: 1
+  retry_attempts: 3
+  retry_delay: 1.0
+  timeout: 300
+
+# Processor definitions
+processors:
+  transcribe:
+    type: "custom_api"
+    config:
+      api_url: "https://whisper.nas.nope.at/transcribe"
+      timeout: 300
+      model: "medium"
+      language: "auto"
+
+# Logging configuration
+logging:
+  level: "INFO"
+  format: "structured"
