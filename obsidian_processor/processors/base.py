@@ -417,36 +417,36 @@ class CustomApiProcessor(BaseProcessor):
         timeout = aiohttp.ClientTimeout(total=self.timeout)
 
         # Read the file content first
-        with open(audio_file, 'rb') as f:
+        with open(audio_file, "rb") as f:
             audio_data = f.read()
 
         async with aiohttp.ClientSession(timeout=timeout) as session:
             data = aiohttp.FormData()
 
             # Add audio file data
-            data.add_field('audio', audio_data, filename=audio_file.name)
+            data.add_field("audio", audio_data, filename=audio_file.name)
 
             # Add optional parameters
             if self.model:
-                data.add_field('model', self.model)
+                data.add_field("model", self.model)
             if self.language and self.language != "auto":
-                data.add_field('language', self.language)
+                data.add_field("language", self.language)
             if self.prompt:
-                data.add_field('prompt', self.prompt)
+                data.add_field("prompt", self.prompt)
             if self.temperature is not None:
-                data.add_field('temperature', str(self.temperature))
+                data.add_field("temperature", str(self.temperature))
 
             # Set headers
             headers = {}
             if self.api_key:
-                headers['Authorization'] = f"Bearer {self.api_key}"
+                headers["Authorization"] = f"Bearer {self.api_key}"
 
             # Make request
             async with session.post(self.api_url, data=data, headers=headers) as response:
                 if response.status == 200:
                     result = await response.json()
-                    if result.get('status') == 'success':
-                        return result['transcription']
+                    if result.get("status") == "success":
+                        return result["transcription"]
                     else:
                         raise Exception(f"API returned error: {result.get('error', 'Unknown error')}")
                 else:

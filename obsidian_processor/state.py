@@ -169,9 +169,7 @@ class StateManager:
 
     async def mark_processing_start(self, note_path: Path, processor_name: str):
         """Mark processor as starting."""
-        state = ProcessingState(
-            status=ProcessingStatus.PROCESSING, timestamp=time.time(), message="Processing started"
-        )
+        state = ProcessingState(status=ProcessingStatus.PROCESSING, timestamp=time.time(), message="Processing started")
         await self.update_processing_state(note_path, processor_name, state)
 
     async def mark_processing_complete(self, note_path: Path, processor_name: str, result: ProcessResult):
