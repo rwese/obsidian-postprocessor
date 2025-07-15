@@ -447,17 +447,17 @@ class CustomApiProcessor(BaseProcessor):
             async with session.post(self.api_url, data=data, headers=headers) as response:
                 if response.status == 200:
                     result = await response.json()
-                    
+
                     # Check if this is an async response with task ID (most common case)
                     if "task_id" in result or "id" in result:
                         task_id = result.get("task_id") or result.get("id")
                         # TODO: Store task_id in frontmatter here via callback/state manager
                         return await self._poll_task_completion(session, task_id, headers)
-                    
+
                     # Fallback: Check if this is a synchronous response with immediate transcription
                     elif result.get("status") == "success" and "transcription" in result:
                         return result["transcription"]
-                    
+
                     else:
                         raise Exception(f"Unexpected API response format: {result}")
                 else:
@@ -471,7 +471,7 @@ class CustomApiProcessor(BaseProcessor):
         # Parse base URL from api_url
         parsed = urlparse(self.api_url)
         base_url = f"{parsed.scheme}://{parsed.netloc}"
-        
+
         # Common status endpoints to try
         status_endpoints = [
             f"{base_url}/task/{task_id}",
@@ -490,42 +490,46 @@ class CustomApiProcessor(BaseProcessor):
                     async with session.get(status_url, headers=headers) as response:
                         if response.status == 200:
                             status_data = await response.json()
-                            
+
                             # Check various status field names
-                            status = (status_data.get("status") or 
-                                    status_data.get("state") or 
-                                    status_data.get("task_status"))
-                            
+                            status = (
+                                status_data.get("status") or status_data.get("state") or status_data.get("task_status")
+                            )
+
                             if status in ["completed", "success", "done"]:
                                 # Try to get transcription from status response first
-                                transcription = (status_data.get("transcription") or 
-                                               status_data.get("result") or 
-                                               status_data.get("text"))
-                                
+                                transcription = (
+                                    status_data.get("transcription")
+                                    or status_data.get("result")
+                                    or status_data.get("text")
+                                )
+
                                 if transcription:
                                     return transcription
-                                
+
                                 # Otherwise try result endpoints
                                 return await self._get_task_result(session, task_id, headers, base_url)
-                            
+
                             elif status in ["failed", "error"]:
-                                error_msg = (status_data.get("error") or 
-                                           status_data.get("error_message") or 
-                                           status_data.get("message") or 
-                                           "Task failed")
+                                error_msg = (
+                                    status_data.get("error")
+                                    or status_data.get("error_message")
+                                    or status_data.get("message")
+                                    or "Task failed"
+                                )
                                 raise Exception(f"Transcription failed: {error_msg}")
-                            
+
                             elif status in ["pending", "running", "processing", "queued"]:
                                 # Task still processing, continue polling
                                 break
-                                
+
                             # If we get here, we found a valid endpoint, break out of endpoint loop
                             break
-                            
+
                 except aiohttp.ClientError:
                     # Try next endpoint
                     continue
-            
+
             # Wait before next poll with exponential backoff
             await asyncio.sleep(poll_interval)
             poll_interval = min(poll_interval * 1.2, max_interval)
@@ -534,31 +538,31 @@ class CustomApiProcessor(BaseProcessor):
 
     async def _get_task_result(self, session: aiohttp.ClientSession, task_id: str, headers: dict, base_url: str) -> str:
         """Retrieve task result from various possible endpoints."""
-        
+
         result_endpoints = [
             f"{base_url}/task/{task_id}/result",
-            f"{base_url}/tasks/{task_id}/result", 
+            f"{base_url}/tasks/{task_id}/result",
             f"{base_url}/result/{task_id}",
             f"{base_url}/download/{task_id}",
         ]
-        
+
         for result_url in result_endpoints:
             try:
                 async with session.get(result_url, headers=headers) as response:
                     if response.status == 200:
                         result_data = await response.json()
-                        
+
                         # Try various result field names
-                        transcription = (result_data.get("transcription") or 
-                                       result_data.get("text") or 
-                                       result_data.get("result"))
-                        
+                        transcription = (
+                            result_data.get("transcription") or result_data.get("text") or result_data.get("result")
+                        )
+
                         if transcription:
                             return transcription
-                            
+
             except aiohttp.ClientError:
                 continue
-        
+
         raise Exception(f"Could not retrieve task result for task {task_id}")
 
     async def _insert_transcription_into_note(self, note_path: Path, audio_file: Path, transcript: str):
