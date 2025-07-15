@@ -147,9 +147,7 @@ logging:
             sys.exit(1)
 
         # Search for config files automatically
-        config_file_path = ConfigLoader.find_config_file(
-            config_path=None, vault_path=search_vault_path
-        )
+        config_file_path = ConfigLoader.find_config_file(config_path=None, vault_path=search_vault_path)
         if config_file_path:
             # Determine config source for user feedback
             if config_file_path.name == "obsidian-postprocessor.yaml" and ".obsidian" in str(config_file_path):
