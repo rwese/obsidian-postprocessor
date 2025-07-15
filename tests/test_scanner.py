@@ -4,6 +4,7 @@ Test async vault scanner for V2
 
 import asyncio
 from pathlib import Path
+from typing import Optional
 
 import pytest
 
@@ -179,7 +180,7 @@ class TestVaultScanner:
         problem_file.write_text("Valid content")
 
         # Test reading with error handling
-        async def read_with_error_handling(file_path: Path) -> tuple[Path, str | None]:
+        async def read_with_error_handling(file_path: Path) -> tuple[Path, Optional[str]]:
             try:
                 await asyncio.sleep(0.01)
                 return file_path, file_path.read_text()
