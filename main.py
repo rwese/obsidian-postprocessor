@@ -141,9 +141,14 @@ logging:
         config_source = "explicit"
         print(f"Using explicit configuration file: {config}")
     else:
-        # Pass explicit config if provided (even if it doesn't exist for error handling)
+        # Check if explicit config was provided but doesn't exist
+        if config:
+            print(f"ERROR: Explicit configuration file not found: {config}")
+            sys.exit(1)
+
+        # Search for config files automatically
         config_file_path = ConfigLoader.find_config_file(
-            config_path=config if config else None, vault_path=search_vault_path
+            config_path=None, vault_path=search_vault_path
         )
         if config_file_path:
             # Determine config source for user feedback
@@ -300,6 +305,13 @@ async def run_processing(config: Dict[str, Any], dry_run: bool = False):
 
     try:
         # Load configuration using new system
+        if not config.get("vault_path"):
+            print(
+                "ERROR: vault_path is required. Please specify --vault-path or "
+                "add vault_path to your configuration file."
+            )
+            sys.exit(1)
+
         vault_path = Path(config["vault_path"])
         exclude_patterns = config.get("exclude_patterns", [])
         processors_config = config.get("processors", {})

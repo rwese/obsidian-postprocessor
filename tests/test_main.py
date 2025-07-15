@@ -43,10 +43,10 @@ def test_main_processing_mode(config_file: Path):
     assert "Configuration loaded and validated" in result.output
 
 
-def test_main_log_level():
+def test_main_log_level(test_vault: Path):
     """Test log level parameter"""
     runner = CliRunner()
-    result = runner.invoke(main, ["--log-level", "DEBUG"])
+    result = runner.invoke(main, ["--log-level", "DEBUG", "--vault-path", str(test_vault), "--dry-run"])
     assert result.exit_code == 0
 
 
