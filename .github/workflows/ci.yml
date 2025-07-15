@@ -189,11 +189,11 @@ jobs:
         import sys
         from pathlib import Path
         sys.path.insert(0, str(Path('obsidian_processor')))
-        from obsidian_processor.config import Config
-        from obsidian_processor.processor import ObsidianProcessor
+        from obsidian_processor.config import Config, ConfigLoader
         from obsidian_processor.scanner import VaultScanner
         from obsidian_processor.state import StateManager
         from obsidian_processor.parser import FrontmatterParser
+        from obsidian_processor.processors import create_processor_registry_from_config
         print('All modules imported successfully on ${{ matrix.os }}')
         "
 
