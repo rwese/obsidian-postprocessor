@@ -457,12 +457,17 @@ class CustomApiProcessor(BaseProcessor):
             if self.temperature is not None:
                 data.add_field("temperature", str(self.temperature))
 
+            # Add async flag to force async processing
+            data.add_field("async", "true")  # Force async processing
+            
+            logger.info(f"Submitting async request to: {self.api_url}")
+            
             # Submit transcription request
             async with session.post(self.api_url, data=data, headers=headers) as response:
                 if response.status == 200:
                     result = await response.json()
 
-                    # Check if this is an async response with task ID (most common case)
+                    # CustomApiProcessor ONLY does async processing - MUST return task_id
                     if "task_id" in result or "id" in result:
                         task_id = result.get("task_id") or result.get("id")
                         logger.info(f"Received task ID {task_id} from API, storing in frontmatter")
@@ -472,13 +477,8 @@ class CustomApiProcessor(BaseProcessor):
                             await self.state_manager.mark_task_submitted(note_path, "CustomApiProcessor", task_id)
                         
                         return await self._poll_task_completion(session, task_id, headers)
-
-                    # Fallback: Check if this is a synchronous response with immediate transcription
-                    elif result.get("status") == "success" and "transcription" in result:
-                        return result["transcription"]
-
                     else:
-                        raise Exception(f"Unexpected API response format: {result}")
+                        raise Exception(f"CustomApiProcessor requires async response with task_id. Got: {result}")
                 else:
                     error_text = await response.text()
                     raise Exception(f"HTTP {response.status}: {error_text}")
