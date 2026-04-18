@@ -7,6 +7,12 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+permissions:
+  contents: read
+  actions: read
+  pull-requests: write
+  statuses: read
+
 jobs:
   test:
     strategy:
